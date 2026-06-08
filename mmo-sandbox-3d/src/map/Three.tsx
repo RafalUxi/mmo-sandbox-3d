@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import React from "react";
 import { useGLTF } from "@react-three/drei";
 import { type GLTF } from "three-stdlib";
+import { RigidBody, type RigidBodyProps } from "@react-three/rapier";
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -13,12 +13,12 @@ type GLTFResult = GLTF & {
   animations: THREE.AnimationClip[];
 };
 
-export function Three(props: React.ComponentProps<"group">) {
+export function Three(props: RigidBodyProps) {
   const { nodes, materials } = useGLTF("/three-transformed.glb") as unknown as GLTFResult;
   return (
-    <group {...props} dispose={null}>
-      <mesh geometry={nodes.Object_2.geometry} material={materials["Material.001"]} rotation={[-Math.PI / 2, 0, 0]} scale={0.201} />
-    </group>
+    <RigidBody {...props} position={[12, 0, 5]} type="fixed" colliders="trimesh">
+      <mesh geometry={nodes.Object_2.geometry} material={materials["Material.001"]} rotation={[-Math.PI / 2, 0, 0]} scale={0.2} />
+    </RigidBody>
   );
 }
 

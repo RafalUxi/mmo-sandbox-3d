@@ -26,7 +26,7 @@ function App() {
           <GrassPos />
           <Mirror />
           <GrzybPos />
-          <Three position={[12, 0, 5]} scale={[7, 7, 7]} />
+          <Three />
         </Physics>
 
         <EffectComposer>
