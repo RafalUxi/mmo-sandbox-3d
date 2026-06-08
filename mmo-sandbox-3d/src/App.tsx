@@ -19,7 +19,7 @@ function App() {
         <pointLight position={[3, 0.5, 4]} color="#ff00aa" intensity={10} distance={3} decay={1} />
         <pointLight position={[3, 0.5, -3.2]} color="#ff00aa" intensity={10} distance={3} decay={1} />
 
-        <Physics debug>
+        <Physics debug timeStep="vary">
           <MapCollider />
           <Stats />
           <PlayerController />

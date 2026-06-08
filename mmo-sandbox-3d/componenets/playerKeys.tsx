@@ -3,12 +3,17 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { Knight } from "../src/animation/Knight";
+import { RapierRigidBody, RigidBody, CapsuleCollider } from "@react-three/rapier";
 
 export function PlayerController() {
   const playerRef = useRef<THREE.Group>(null);
+  const rbRef = useRef<RapierRigidBody>(null);
   const keys = useRef({ w: false, a: false, s: false, d: false, space: false });
   const cameraDirection = useRef(new THREE.Vector3());
   const cameraRight = useRef(new THREE.Vector3());
+  const direction = useRef(new THREE.Vector3());
+  const baseVecRef = useRef(new THREE.Vector3(0, 1, 0));
+  const targetQuaternion = useRef(new THREE.Quaternion());
   const currentActionRef = useRef<"attack" | "idle" | "run" | "slowrun" | "tpose" | "walk">("idle");
   const [currentAction, setCurrentAction] = useState<"attack" | "idle" | "run" | "slowrun" | "tpose" | "walk">("idle");
 
@@ -38,8 +43,9 @@ export function PlayerController() {
     };
   }, []);
 
-  useFrame((state, delta) => {
+  useFrame((state) => {
     if (!playerRef.current) return;
+    if (!rbRef.current) return;
 
     const isMoving = keys.current.w || keys.current.s || keys.current.a || keys.current.d;
     const isAttack = keys.current.space;
@@ -57,61 +63,59 @@ export function PlayerController() {
     cameraDirection.current.y = 0;
     cameraDirection.current.normalize();
     cameraRight.current.set(-cameraDirection.current.z, 0, cameraDirection.current.x); // Prostpopadły wektor do klawiszy a i d
+    direction.current.set(0, 0, 0);
+    if (keys.current.w) direction.current.add(cameraDirection.current);
+    if (keys.current.s) direction.current.sub(cameraDirection.current);
+    if (keys.current.a) direction.current.sub(cameraRight.current);
+    if (keys.current.d) direction.current.add(cameraRight.current);
+
+    direction.current.y = 0;
+    if (direction.current.lengthSq() > 0) direction.current.normalize();
 
     const speed = 7;
 
-    let moveX = 0;
-    let moveZ = 0;
+    const currentV = rbRef.current.linvel(); // zmienna przechowuje weketor ruchu w klatce
+    const yVel = Math.min(currentV.y, 0);
 
-    if (keys.current.w) {
-      moveX += cameraDirection.current.x * speed * delta;
-      moveZ += cameraDirection.current.z * speed * delta;
-    }
-    if (keys.current.s) {
-      moveX -= cameraDirection.current.x * speed * delta;
-      moveZ -= cameraDirection.current.z * speed * delta;
-    }
-    if (keys.current.a) {
-      moveX -= cameraRight.current.x * speed * delta;
-      moveZ -= cameraRight.current.z * speed * delta;
-    }
-    if (keys.current.d) {
-      moveX += cameraRight.current.x * speed * delta;
-      moveZ += cameraRight.current.z * speed * delta;
+    if (isAttack && currentActionRef.current !== "attack") {
+      currentActionRef.current = "attack";
+      setCurrentAction("attack");
     }
 
-    if (isMoving && playerRef.current) {
-      const rotate = Math.atan2(moveX, moveZ);
-      const targetQuaternion = new THREE.Quaternion();
-      targetQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotate);
-      playerRef.current.quaternion.slerp(targetQuaternion, 0.15); // obrót postaci jak idzie
+    if (isMoving && !isAttack) {
+      rbRef.current.setLinvel({ x: direction.current.x * speed, y: yVel, z: direction.current.z * speed }, true);
+    } else {
+      rbRef.current.setLinvel({ x: 0, y: yVel, z: 0 }, true);
     }
 
-    if (isAttack) {
-      moveX = 0;
-      moveZ = 0;
-      if (currentActionRef.current !== "attack") {
-        currentActionRef.current = "attack";
-        setCurrentAction("attack");
-      }
+    if (isMoving) {
+      const rotate = Math.atan2(direction.current.x, direction.current.z);
+      targetQuaternion.current.setFromAxisAngle(baseVecRef.current, rotate);
+      playerRef.current.quaternion.slerp(targetQuaternion.current, 0.15); // obrót postaci jak idzie
     }
 
-    playerRef.current.position.x += moveX;
-    playerRef.current.position.z += moveZ;
-
-    console.log(playerRef.current.position);
-
-    state.camera.position.x += moveX;
-    state.camera.position.z += moveZ;
+    const playerPos = rbRef.current.translation();
 
     if (state.controls) {
-      (state.controls as any).target.copy(new THREE.Vector3(playerRef.current.position.x, playerRef.current.position.y + 0.2, playerRef.current.position.z));
+      const controlsTarget = (state.controls as any).target;
+
+      // Obliczamy o ile przesunął się gracz w tej klatce
+      const diffX = playerPos.x - controlsTarget.x;
+      const diffZ = playerPos.z - controlsTarget.z;
+      state.camera.position.x += diffX;
+      state.camera.position.z += diffZ;
+
+      // Ustawiamy nowy punkt patrenia
+      controlsTarget.set(playerPos.x, playerPos.y + 0.2, playerPos.z);
     }
   });
 
   return (
-    <group ref={playerRef} scale={0.45} position={[2, 0, 2]}>
-      <Knight action={currentAction} />
-    </group>
+    <RigidBody type="dynamic" restitution={0} colliders={false} enabledRotations={[false, false, false]} ref={rbRef} position={[2, 2, 2]}>
+      <CapsuleCollider args={[0.25, 0.15]} position={[0, 0.5, 0]} />
+      <group ref={playerRef} scale={0.45}>
+        <Knight action={currentAction} />
+      </group>
+    </RigidBody>
   );
 }
