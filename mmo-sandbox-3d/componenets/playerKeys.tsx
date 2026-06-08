@@ -111,7 +111,7 @@ export function PlayerController() {
   });
 
   return (
-    <RigidBody type="dynamic" restitution={0} colliders={false} enabledRotations={[false, false, false]} ref={rbRef} position={[2, 2, 2]}>
+    <RigidBody type="dynamic" colliders={false} enabledRotations={[false, false, false]} ref={rbRef} position={[2, 2, 2]}>
       <CapsuleCollider args={[0.25, 0.15]} position={[0, 0.5, 0]} />
       <group ref={playerRef} scale={0.45}>
         <Knight action={currentAction} />
