@@ -24,7 +24,7 @@ export function Mirror() {
   return (
     <group>
       {posicionMemo.map((obj, index) => (
-        <MirrorTest key={index} position={obj.posicion} rotation={obj.rotation} scale={[15, 5, 1]} />
+        <MirrorTest key={index} position={obj.posicion} rotation={obj.rotation} scale={[18, 19, 1]} />
       ))}
     </group>
   );

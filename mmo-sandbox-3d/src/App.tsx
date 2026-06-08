@@ -9,17 +9,19 @@ import { Mirror } from "./map/map_scripts/Mirror_pos";
 import { GrzybPos } from "./map/map_scripts/Grzyb_pos";
 import { Three } from "./map/Three";
 import { MapCollider } from "./map/collider/MapCollider";
+import { Wall } from "./map/map_scripts/Wall_pos";
 
 function App() {
   return (
     <div className="h-screen w-full bg-slate-900">
       <Canvas camera={{ position: [0, 5, 8] }}>
         <ambientLight intensity={10} color="#4a2480" />
+        <color attach="background" args={["#000000"]} />
 
         <pointLight position={[3, 0.5, 4]} color="#ff00aa" intensity={10} distance={3} decay={1} />
         <pointLight position={[3, 0.5, -3.2]} color="#ff00aa" intensity={10} distance={3} decay={1} />
 
-        <Physics debug timeStep="vary">
+        <Physics timeStep="vary" debug>
           <MapCollider />
           <Stats />
           <PlayerController />
@@ -27,6 +29,7 @@ function App() {
           <Mirror />
           <GrzybPos />
           <Three />
+          {/*<Wall />*/}
         </Physics>
 
         <EffectComposer>
