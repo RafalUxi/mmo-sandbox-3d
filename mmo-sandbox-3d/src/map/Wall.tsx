@@ -5,10 +5,10 @@ import { RigidBody, type RigidBodyProps } from "@react-three/rapier";
 
 type GLTFResult = GLTF & {
   nodes: {
-    Object_2: THREE.Mesh;
+    defaultMaterial: THREE.Mesh;
   };
   materials: {
-    ["Scene_-_Root"]: THREE.MeshStandardMaterial;
+    cave_wall: THREE.MeshStandardMaterial;
   };
   animations: THREE.AnimationClip[];
 };
@@ -17,7 +17,7 @@ export function WallTexture(props: RigidBodyProps) {
   const { nodes, materials } = useGLTF("/wall-transformed.glb") as unknown as GLTFResult;
   return (
     <RigidBody {...props} type="fixed" colliders="trimesh">
-      <mesh geometry={nodes.Object_2.geometry} material={materials["Scene_-_Root"]} rotation={[-Math.PI / 2, 0, 0]} />
+      <mesh geometry={nodes.defaultMaterial.geometry} material={materials.cave_wall} />
     </RigidBody>
   );
 }

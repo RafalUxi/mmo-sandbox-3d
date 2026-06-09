@@ -5,7 +5,7 @@ export function GrassPos() {
   const posicionMemo = useMemo(() => {
     const posicion: [number, number, number][] = [];
     for (let i = 0; i < 25; i++) {
-      for (let j = 0; j < 15; j++) {
+      for (let j = 0; j < 18; j++) {
         posicion.push([j * 1, 0, i * 1]);
       }
     }

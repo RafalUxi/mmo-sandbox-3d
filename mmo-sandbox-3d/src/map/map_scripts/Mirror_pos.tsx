@@ -10,7 +10,7 @@ export function Mirror() {
   const posicionMemo = useMemo(() => {
     const posicion: IMirror[] = [];
 
-    posicion.push({ posicion: [7, 2.5, 0], rotation: [0, 0, 0] });
+    posicion.push({ posicion: [10, 2.5, 0], rotation: [0, 0, 0] });
 
     //posicion.push({ posicion: [5.65, 1.3, 11.7], rotation: [0, Math.PI, 0] });
 
@@ -24,7 +24,7 @@ export function Mirror() {
   return (
     <group>
       {posicionMemo.map((obj, index) => (
-        <MirrorTest key={index} position={obj.posicion} rotation={obj.rotation} scale={[18, 19, 1]} />
+        <MirrorTest key={index} position={obj.posicion} rotation={obj.rotation} scale={[22, 19, 1]} />
       ))}
     </group>
   );
