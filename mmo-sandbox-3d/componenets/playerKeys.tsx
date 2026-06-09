@@ -72,7 +72,7 @@ export function PlayerController() {
     direction.current.y = 0;
     if (direction.current.lengthSq() > 0) direction.current.normalize();
 
-    const speed = 2;
+    const speed = 7;
 
     const currentV = rbRef.current.linvel(); // zmienna przechowuje weketor ruchu w klatce
     const yVel = Math.min(currentV.y, 0);
@@ -113,7 +113,7 @@ export function PlayerController() {
   return (
     <RigidBody type="dynamic" colliders={false} enabledRotations={[false, false, false]} ref={rbRef} position={[2, 2, 2]}>
       <CapsuleCollider args={[0.25, 0.15]} position={[0, 0.5, 0]} />
-      <group ref={playerRef} scale={0.3}>
+      <group ref={playerRef} scale={0.45}>
         <Knight action={currentAction} />
       </group>
     </RigidBody>
