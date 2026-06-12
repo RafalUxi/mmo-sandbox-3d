@@ -11,6 +11,7 @@ import { Three } from "./map/Three";
 import { MapCollider } from "./map/collider/MapCollider";
 import { Wall } from "./map/map_scripts/Wall_pos";
 import { Metin } from "./map/Metin";
+import { Orb } from "./map/orb";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
           <Three />
           <Metin />
           <Wall />
+          <Orb />
         </Physics>
 
         <EffectComposer>
