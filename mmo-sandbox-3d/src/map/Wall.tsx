@@ -16,7 +16,7 @@ type GLTFResult = GLTF & {
 export function WallTexture(props: RigidBodyProps) {
   const { nodes, materials } = useGLTF("/wall-transformed.glb") as unknown as GLTFResult;
   return (
-    <RigidBody {...props} type="fixed" colliders="trimesh">
+    <RigidBody {...props} type="fixed" colliders="trimesh" userData={{ type: "wall" }}>
       <mesh geometry={nodes.defaultMaterial.geometry} material={materials.cave_wall} />
     </RigidBody>
   );

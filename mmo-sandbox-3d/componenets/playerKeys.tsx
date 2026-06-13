@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { Knight } from "../src/animation/Knight";
-import { RapierRigidBody, RigidBody, CapsuleCollider } from "@react-three/rapier";
+import { RapierRigidBody, RigidBody, CapsuleCollider, useRapier } from "@react-three/rapier";
 
 export function PlayerController() {
   const playerRef = useRef<THREE.Group>(null);
@@ -16,6 +16,11 @@ export function PlayerController() {
   const targetQuaternion = useRef(new THREE.Quaternion());
   const currentActionRef = useRef<"attack" | "idle" | "run" | "slowrun" | "tpose" | "walk">("idle");
   const [currentAction, setCurrentAction] = useState<"attack" | "idle" | "run" | "slowrun" | "tpose" | "walk">("idle");
+  const { world, rapier } = useRapier();
+  const timer = useRef(0);
+  const rapierBallHit = useMemo(() => new rapier.Ball(0.5), [rapier]);
+  const hasHit = useRef(false);
+  const attackAnimationTime: number = 1.5333333015441895;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -43,7 +48,7 @@ export function PlayerController() {
     };
   }, []);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!playerRef.current) return;
     if (!rbRef.current) return;
 
@@ -59,6 +64,52 @@ export function PlayerController() {
     }
 
     state.camera.getWorldDirection(cameraDirection.current); // Pobranie pozycji kamery
+
+    // timer do obsługi uderzenia
+    if (isAttack) {
+      timer.current += delta;
+    } else timer.current = 0;
+
+    const isHit = isAttack && timer.current > attackAnimationTime / 2 && timer.current < attackAnimationTime / 1.5;
+
+    if (!isAttack) hasHit.current = false; // reset flagi jak !isAttack
+
+    if (isAttack && timer.current > attackAnimationTime) {
+      hasHit.current = false;
+      timer.current = 0;
+    }
+
+    if (isHit && !hasHit.current) {
+      cameraDirection.current.y = 0;
+
+      const hitDirectionNormalize = cameraDirection.current.normalize();
+
+      const hitObj = world.castShape(
+        rbRef.current.translation(), // początek {x,y,z}
+        { w: 1, x: 0, y: 0, z: 0 }, // orientacja kształtu — kwaternion { w, x, y, z }
+        { x: hitDirectionNormalize.x, y: hitDirectionNormalize.y, z: hitDirectionNormalize.z }, // kierunek rzutu — znormalizowany wektor { x, y, z }
+        rapierBallHit, // geometria kształtu
+        0,
+        1.5, // zasieg w jednostakch
+        true, // czy zatrzymać się gdy shape startuje w kolizji — true
+        undefined, // filterFlags
+        undefined, // filterGroups
+        undefined, // filterExcludeCollider
+        rbRef.current, // filterExcludeRigidBody — wykluczasz własne ciało gracza
+        undefined, // filterPredicate
+      );
+
+      if (hitObj !== null) {
+        hasHit.current = true; //flaga uderzenia
+        const parent = hitObj.collider.parent();
+        const data = parent?.userData as { type?: string };
+
+        if (data?.type === "Metin") {
+          // trafiono Metina
+          console.log("Hit Metin! Distance:", hitObj.time_of_impact);
+        }
+      }
+    }
 
     cameraDirection.current.y = 0;
     cameraDirection.current.normalize();
@@ -108,10 +159,26 @@ export function PlayerController() {
       // Ustawiamy nowy punkt patrenia
       controlsTarget.set(playerPos.x, playerPos.y + 0.2, playerPos.z);
     }
+
+    const toCamera = state.camera.position.clone().sub(playerPos).normalize();
+    const hitCamera = world.castRay(
+      new rapier.Ray(playerPos, toCamera),
+      5, // maxDistance = maxDistance OrbitControls
+      true,
+      undefined,
+      undefined,
+      undefined,
+      rbRef.current, // exclude player
+      (collider) => (collider.parent()?.userData as { type?: string })?.type === "wall",
+    );
+    if (hitCamera) {
+      const newDistance = hitCamera.timeOfImpact - 0.2;
+      state.camera.position.copy(playerPos).addScaledVector(toCamera, newDistance);
+    }
   });
 
   return (
-    <RigidBody type="dynamic" colliders={false} enabledRotations={[false, false, false]} ref={rbRef} position={[2, 2, 2]}>
+    <RigidBody type="dynamic" colliders={false} enabledRotations={[false, false, false]} ref={rbRef} position={[5, 2, 5]}>
       <CapsuleCollider args={[0.25, 0.15]} position={[0, 0.5, 0]} />
       <group ref={playerRef} scale={0.45}>
         <Knight action={currentAction} />

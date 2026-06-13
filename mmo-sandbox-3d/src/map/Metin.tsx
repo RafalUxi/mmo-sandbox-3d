@@ -16,7 +16,7 @@ type GLTFResult = GLTF & {
 export function Metin(props: RigidBodyProps) {
   const { nodes, materials } = useGLTF("/metin-transformed.glb") as unknown as GLTFResult;
   return (
-    <RigidBody {...props} type="fixed" colliders="hull" scale={[3, 3, 3]} position={[9, -1.2, 14]}>
+    <RigidBody userData={{ type: "Metin" }} {...props} type="fixed" colliders="hull" scale={[3, 3, 3]} position={[9, -1.2, 14]}>
       <mesh geometry={nodes.Object_4.geometry} material={materials.Crystal_PBR} />
     </RigidBody>
   );

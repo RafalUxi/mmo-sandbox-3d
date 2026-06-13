@@ -8,12 +8,15 @@ export function Orb() {
       [2, 1, 2],
       [5, 1, 5],
       [9, 1, 3],
+      [10, 1, 5],
+      [14, 2, 6],
+      [8, 1, 7],
     ],
     [],
   );
   const ref = useRef<THREE.InstancedMesh>(null!);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const geometry = useMemo(() => new THREE.SphereGeometry(0.05, 6, 6), []);
+  const geometry = useMemo(() => new THREE.SphereGeometry(0.025, 6, 6), []);
   const material = useMemo(
     () =>
       new THREE.MeshStandardMaterial({

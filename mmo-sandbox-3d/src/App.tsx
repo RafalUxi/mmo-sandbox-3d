@@ -24,13 +24,13 @@ function App() {
         <pointLight position={[3, 0.5, -3.2]} color="#ff00aa" intensity={10} distance={3} decay={1} />
 
         <Physics timeStep="vary">
-          <MapCollider />
           <Stats />
           <PlayerController />
+          <MapCollider />
           <GrassPos />
           <Mirror />
-          <GrzybPos />
           <Three />
+          <GrzybPos />
           <Metin />
           <Wall />
           <Orb />
