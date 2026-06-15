@@ -7,7 +7,7 @@ import { PlayerController } from "../componenets/playerKeys";
 import { GrassPos } from "./map/map_scripts/Grass_pos";
 import { Mirror } from "./map/map_scripts/Mirror_pos";
 import { GrzybPos } from "./map/map_scripts/Grzyb_pos";
-import { Three } from "./map/Three";
+import { ThreePos } from "./map/map_scripts/Three_pos";
 import { MapCollider } from "./map/collider/MapCollider";
 import { Wall } from "./map/map_scripts/Wall_pos";
 import { Metin } from "./map/Metin";
@@ -29,7 +29,7 @@ function App() {
           <MapCollider />
           <GrassPos />
           <Mirror />
-          <Three />
+          <ThreePos />
           <GrzybPos />
           <Metin />
           <Wall />

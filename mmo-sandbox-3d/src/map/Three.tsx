@@ -16,7 +16,7 @@ type GLTFResult = GLTF & {
 export function Three(props: RigidBodyProps) {
   const { nodes, materials } = useGLTF("/three-transformed.glb") as unknown as GLTFResult;
   return (
-    <RigidBody {...props} position={[12, 0, 5]} type="fixed" colliders="trimesh">
+    <RigidBody {...props} type="fixed" colliders="trimesh">
       <mesh geometry={nodes.Object_2.geometry} material={materials["Material.001"]} rotation={[-Math.PI / 2, 0, 0]} scale={1} />
     </RigidBody>
   );

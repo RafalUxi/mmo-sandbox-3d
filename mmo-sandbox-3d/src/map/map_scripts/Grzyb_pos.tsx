@@ -13,11 +13,7 @@ export function GrzybPos() {
 
     posicion.push({ posicion: [10, 0, 7], rotation: [0, 0, 0], scale: [1, 1, 1] });
 
-    //posicion.push({ posicion: [5.65, 1.3, 11.7], rotation: [0, Math.PI, 0] });
-
-    //posicion.push({ posicion: [11.7, 1.3, 5.65], rotation: [0, -Math.PI / 2, 0] });
-
-    //posicion.push({ posicion: [0, 1.3, 5.65], rotation: [0, Math.PI / 2, 0] });
+    posicion.push({ posicion: [10, 0, 4], rotation: [0, 0, 0], scale: [0.5, 0.5, 0.5] });
 
     return posicion;
   }, []);
