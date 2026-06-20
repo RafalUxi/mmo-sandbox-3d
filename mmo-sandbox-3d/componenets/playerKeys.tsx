@@ -90,13 +90,17 @@ export function PlayerController() {
         { x: hitDirectionNormalize.x, y: hitDirectionNormalize.y, z: hitDirectionNormalize.z }, // kierunek rzutu — znormalizowany wektor { x, y, z }
         rapierBallHit, // geometria kształtu
         0,
-        1.5, // zasieg w jednostakch
+        3, // zasieg w jednostakch
         true, // czy zatrzymać się gdy shape startuje w kolizji — true
         undefined, // filterFlags
         undefined, // filterGroups
         undefined, // filterExcludeCollider
         rbRef.current, // filterExcludeRigidBody — wykluczasz własne ciało gracza
-        undefined, // filterPredicate
+        (collider) => {
+          // filterpredicate
+          const data = collider.parent()?.userData as { type?: string };
+          return data?.type === "Metin";
+        },
       );
 
       if (hitObj !== null) {

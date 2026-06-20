@@ -12,6 +12,8 @@ import { MapCollider } from "./map/collider/MapCollider";
 import { Wall } from "./map/map_scripts/Wall_pos";
 import { Metin } from "./map/Metin";
 import { Orb } from "./map/orb";
+import { Plant } from "./map/Plant";
+import { Lilia_roz_pos } from "./map/map_scripts/lilia_roz_pos";
 
 function App() {
   return (
@@ -20,10 +22,10 @@ function App() {
         <ambientLight intensity={10} color="#4a2480" />
         <color attach="background" args={["#000000"]} />
 
-        <pointLight position={[3, 0.5, 4]} color="#ff00aa" intensity={10} distance={3} decay={1} />
-        <pointLight position={[3, 0.5, -3.2]} color="#ff00aa" intensity={10} distance={3} decay={1} />
+        <pointLight position={[7, 4, 14]} color="#ff00aa" intensity={50} distance={10} decay={2} />
+        <pointLight position={[12, 3, 5]} color="#ff00aa" intensity={30} distance={8} decay={2} />
 
-        <Physics timeStep="vary" debug>
+        <Physics timeStep="vary">
           <Stats />
           <PlayerController />
           <MapCollider />
@@ -33,8 +35,11 @@ function App() {
           <GrzybPos />
           <Metin />
           <Wall />
-          <Orb />
+          <Plant />
         </Physics>
+
+        <Orb />
+        <Lilia_roz_pos />
 
         <EffectComposer>
           <Bloom

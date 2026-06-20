@@ -15,6 +15,8 @@ export function GrzybPos() {
 
     posicion.push({ posicion: [10, 0, 4], rotation: [0, 0, 0], scale: [0.5, 0.5, 0.5] });
 
+    posicion.push({ posicion: [4, 0, 20], rotation: [0, 0, 0], scale: [2, 2, 2] });
+
     return posicion;
   }, []);
 

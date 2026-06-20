@@ -13,8 +13,6 @@ export function ThreePos() {
 
     posicion.push({ posicion: [12, 0, 5], rotation: [0, 0, 0], scale: [1, 1, 1] });
 
-    posicion.push({ posicion: [12, 0, 19], rotation: [0, Math.PI / 2, 0], scale: [1.5, 1.5, 1.5] });
-
     return posicion;
   }, []);
 
