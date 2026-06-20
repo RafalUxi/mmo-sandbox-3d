@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { Knight } from "../src/animation/Knight";
 import { RapierRigidBody, RigidBody, CapsuleCollider, useRapier } from "@react-three/rapier";
+import { io } from "socket.io-client";
+import { type Socket } from "socket.io-client";
 
 export function PlayerController() {
   const playerRef = useRef<THREE.Group>(null);
@@ -21,6 +23,22 @@ export function PlayerController() {
   const rapierBallHit = useMemo(() => new rapier.Ball(0.5), [rapier]);
   const hasHit = useRef(false);
   const attackAnimationTime: number = 1.5333333015441895;
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    socketRef.current = io("http://localhost:5000");
+
+    const interval = setInterval(() => {
+      if (rbRef.current && playerRef.current) {
+        socketRef.current?.emit("sendMessage", { type: "move", x: rbRef.current.translation().x, y: rbRef.current.translation().y, z: rbRef.current.translation().z, rotation: playerRef.current.rotation.y });
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+      socketRef.current?.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

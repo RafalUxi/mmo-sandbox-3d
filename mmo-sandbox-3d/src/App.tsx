@@ -25,6 +25,7 @@ function App() {
         <pointLight position={[7, 4, 14]} color="#ff00aa" intensity={50} distance={10} decay={2} />
         <pointLight position={[12, 3, 5]} color="#ff00aa" intensity={30} distance={8} decay={2} />
 
+        {/* Modele mapy + kontroler postaci */}
         <Physics timeStep="vary">
           <Stats />
           <PlayerController />
@@ -38,8 +39,11 @@ function App() {
           <Plant />
         </Physics>
 
+        {/* części mapy bez hitboxow */}
         <Orb />
         <Lilia_roz_pos />
+
+        {/* Kontroler danych ruchu */}
 
         <EffectComposer>
           <Bloom
