@@ -1,4 +1,5 @@
 import "dotenv/config";
+import jwt from "jsonwebtoken";
 import dns from "node:dns";
 dns.setDefaultResultOrder("ipv4first");
 import { createServer } from "http";
@@ -31,16 +32,17 @@ interface CustomSocket extends Socket {
   userId?: number;
 }
 
-io.on("connection", (socket) => {
+io.on("connection", (socket: CustomSocket) => {
   console.log(`✅ Nawiązano połączenie WebSocket! ID kabla: ${socket.id}`);
   socket.on("sendMessage", (dane) => {
     try {
-      console.log(dane.x);
+      io.emit("playerMove", { id: socket.id, x: dane.x, y: dane.y, z: dane.z, action: dane.action, rotation: dane.rotation });
     } catch {
       console.log("Błąd socket");
     }
   });
   socket.on("disconnect", () => {
+    io.emit("disconnectPlayer", { id: socket.id });
     console.log(`❌ Rozłączono: ${socket.id}`);
   });
 });

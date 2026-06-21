@@ -4,10 +4,12 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { Knight } from "../src/animation/Knight";
 import { RapierRigidBody, RigidBody, CapsuleCollider, useRapier } from "@react-three/rapier";
-import { io } from "socket.io-client";
-import { type Socket } from "socket.io-client";
 
-export function PlayerController() {
+interface ioProps {
+  posicionChange: (newPosicion: { x: number; y: number; z: number; action: string; rotation: number }) => void;
+}
+
+export function PlayerController({ posicionChange }: ioProps) {
   const playerRef = useRef<THREE.Group>(null);
   const rbRef = useRef<RapierRigidBody>(null);
   const keys = useRef({ w: false, a: false, s: false, d: false, space: false });
@@ -23,20 +25,16 @@ export function PlayerController() {
   const rapierBallHit = useMemo(() => new rapier.Ball(0.5), [rapier]);
   const hasHit = useRef(false);
   const attackAnimationTime: number = 1.5333333015441895;
-  const socketRef = useRef<Socket | null>(null);
+  const rotationRef = useRef(0);
 
   useEffect(() => {
-    socketRef.current = io("http://localhost:5000");
-
     const interval = setInterval(() => {
       if (rbRef.current && playerRef.current) {
-        socketRef.current?.emit("sendMessage", { type: "move", x: rbRef.current.translation().x, y: rbRef.current.translation().y, z: rbRef.current.translation().z, rotation: playerRef.current.rotation.y });
+        posicionChange({ x: rbRef.current.translation().x, y: rbRef.current.translation().y, z: rbRef.current.translation().z, action: currentActionRef.current, rotation: rotationRef.current });
       }
-    }, 5000);
-
+    }, 35);
     return () => {
       clearInterval(interval);
-      socketRef.current?.disconnect();
     };
   }, []);
 
@@ -163,6 +161,7 @@ export function PlayerController() {
 
     if (isMoving) {
       const rotate = Math.atan2(direction.current.x, direction.current.z);
+      rotationRef.current = rotate;
       targetQuaternion.current.setFromAxisAngle(baseVecRef.current, rotate);
       playerRef.current.quaternion.slerp(targetQuaternion.current, 0.15); // obrót postaci jak idzie
     }

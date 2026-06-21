@@ -1,6 +1,9 @@
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
+import { io } from "socket.io-client";
+import { Socket } from "socket.io-client";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
+import { useEffect, useRef, useState } from "react";
 import { Stats } from "@react-three/drei";
 import { OrbitControls } from "@react-three/drei";
 import { PlayerController } from "../componenets/playerKeys";
@@ -14,8 +17,33 @@ import { Metin } from "./map/Metin";
 import { Orb } from "./map/orb";
 import { Plant } from "./map/Plant";
 import { Lilia_roz_pos } from "./map/map_scripts/lilia_roz_pos";
+import { OtherPlayer } from "../componenets/OtherPlayer";
 
 function App() {
+  const otherPlayers = useRef(new Map<string, { x: number; y: number; z: number; action: string; rotation: number }>());
+  const [playerIds, setPlayerIds] = useState<string[]>([]);
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    socketRef.current = io("http://localhost:5000");
+
+    socketRef.current.on("playerMove", (dane) => {
+      if (dane.id !== socketRef.current?.id) {
+        setPlayerIds((prev) => (prev.includes(dane.id) ? prev : [...prev, dane.id]));
+        otherPlayers.current.set(dane.id, { x: dane.x, y: dane.y, z: dane.z, action: dane.action, rotation: dane.rotation });
+      }
+    });
+
+    socketRef.current.on("disconnectPlayer", (dane) => {
+      otherPlayers.current.delete(dane.id);
+      setPlayerIds((prev) => prev.filter((id) => id !== dane.id));
+    });
+
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, []);
+
   return (
     <div className="h-screen w-full bg-slate-900">
       <Canvas camera={{ position: [0, 5, 8] }}>
@@ -27,8 +55,8 @@ function App() {
 
         {/* Modele mapy + kontroler postaci */}
         <Physics timeStep="vary">
+          <PlayerController posicionChange={(newPos) => socketRef.current?.emit("sendMessage", { type: "move", ...newPos })} />
           <Stats />
-          <PlayerController />
           <MapCollider />
           <GrassPos />
           <Mirror />
@@ -54,6 +82,10 @@ function App() {
         </EffectComposer>
 
         <OrbitControls makeDefault minPolarAngle={0} maxPolarAngle={Math.PI / 2} maxDistance={5} />
+
+        {playerIds.map((id) => (
+          <OtherPlayer key={id} id={id} posRef={otherPlayers} />
+        ))}
       </Canvas>
     </div>
   );

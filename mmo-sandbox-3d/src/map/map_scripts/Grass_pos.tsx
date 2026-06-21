@@ -15,7 +15,7 @@ export function GrassPos() {
   return (
     <group>
       {posicionMemo.map((pos, i) => (
-        <Cristal position={pos} key={i} scale={[1, Math.max(Math.min(Math.random() * 2, 1), 0.5), 1]} />
+        <Cristal position={pos} key={i} scale={[1, 0.5, 1]} />
       ))}
     </group>
   );

@@ -31,6 +31,7 @@ export function Knight({ action = "idle", ...props }) {
   const group = React.useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF("/knight.glb");
   const { scene: swordScene } = useGLTF("/miecz.glb");
+  const swordClone = React.useMemo(() => swordScene.clone(true), [swordScene]);
   const clone = React.useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { nodes, materials } = useGraph(clone) as unknown as GLTFResult;
   const { actions } = useAnimations(animations, group);
@@ -67,7 +68,7 @@ export function Knight({ action = "idle", ...props }) {
 
           {createPortal(
             <group position={[0, 0.07, 0.16]} rotation={[Math.PI / 2, Math.PI, 0]} scale={0.35}>
-              <primitive object={swordScene} />
+              <primitive object={swordClone} />
             </group>,
             nodes.handR,
           )}
