@@ -6,6 +6,7 @@ import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { useEffect, useRef, useState } from "react";
 import { Stats } from "@react-three/drei";
 import { OrbitControls } from "@react-three/drei";
+import { PerspectiveCamera } from "@react-three/drei";
 import { PlayerController } from "../componenets/playerKeys";
 import { GrassPos } from "./map/map_scripts/Grass_pos";
 import { Mirror } from "./map/map_scripts/Mirror_pos";
@@ -18,6 +19,26 @@ import { Orb } from "./map/orb";
 import { Plant } from "./map/Plant";
 import { Lilia_roz_pos } from "./map/map_scripts/lilia_roz_pos";
 import { OtherPlayer } from "../componenets/OtherPlayer";
+import gameplayimg_1 from "./graphics/gameplayimg_1.png";
+import Profil from "./graphics/Profil.jpg";
+import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiPostgresql, SiTailwindcss, SiVite } from "react-icons/si";
+import { TbBox } from "react-icons/tb";
+import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
+import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
+
+import {
+  FiUser, // pole: nazwa użytkownika
+  FiLock, // pole: hasło
+  FiEye, // pokaż hasło
+  FiEyeOff, // ukryj hasło
+  FiLogIn, // przycisk: zaloguj
+  FiUserPlus, // przycisk: zarejestruj
+  FiX, // zamknij modal / wyczyść pole
+  FiAlertCircle, // błąd walidacji
+  FiCheck, // sukces
+} from "react-icons/fi";
+import { Knight } from "./animation/Knight";
+import { Cristal } from "./map/Cristal";
 
 function App() {
   // ruch - graczy online
@@ -25,15 +46,32 @@ function App() {
   const [playerIds, setPlayerIds] = useState<string[]>([]);
   const socketRef = useRef<Socket | null>(null);
 
+  // Pierwsza strona do wyświetlenia
+  const [frontPage, setfrontPage] = useState<boolean>(true);
+
   // Menu
-  const [menu, setMenu] = useState<boolean>(true);
+  const [login_menu, setLogin] = useState<boolean>(true);
   const [register_menu, setRegister] = useState<boolean>(false);
-  const [login_menu, setLogin] = useState<boolean>(false);
   const [chatInput_registger_password, setChatInput_registger_password] = useState<string>("");
   const [chatInput_registger_login, setChatInput_registger_login] = useState<string>("");
   const [chatInput_login_password, setChatInput_login_password] = useState<string>("");
   const [chatInput_login_login, setChatInput_login_login] = useState<string>("");
   const [token, setToken] = useState(localStorage.getItem("authToken"));
+
+  const stack = [
+    { name: "React Three Fiber", Icon: SiReact, color: "#61DAFB" },
+    { name: "JavaScript", Icon: SiJavascript, color: "#FFBF00" },
+    { name: "Tailwind CSS", Icon: SiTailwindcss, color: "#38BDF8" },
+    { name: "TypeScript", Icon: SiTypescript, color: "#3178C6" },
+    { name: "Node.js", Icon: SiNodedotjs, color: "#5FA04E" },
+    { name: "Socket.IO", Icon: SiSocketdotio, color: "#FFFFFF" },
+    { name: "Three.js", Icon: SiThreedotjs, color: "#FFFFFF" },
+    { name: "Rapier", Icon: TbBox, color: "#C084FC" },
+    { name: "GLSL", Icon: SiOpengl, color: "#5586A4" },
+    { name: "Supabase", Icon: SiSupabase, color: "#3FCF8E" },
+    { name: "Blender", Icon: SiBlender, color: "#E97451" },
+    { name: "Git", Icon: SiGit, color: "#F05032" },
+  ];
 
   useEffect(() => {
     socketRef.current = io("http://localhost:5000");
@@ -55,7 +93,7 @@ function App() {
     };
   }, []);
 
-  if (!token) {
+  if (frontPage) {
     return (
       <div className="relative">
         <nav className="fixed top-1/2 right-10 z-50 flex -translate-y-1/2 flex-col gap-4 text-white">
@@ -74,10 +112,10 @@ function App() {
         </nav>
 
         <section id="start" className="relative flex h-screen w-full flex-col items-center" style={{ backgroundImage: "url('/hero.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
-          <div className="absolute inset-0 bg-gradient-to-b from-black from-0% via-black/20 via-30% to-transparent to-50%" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black from-0% via-black/20 via-30% to-transparent to-50%" />
-          <div className="absolute inset-0 bg-gradient-to-l from-black from-0% via-black/20 via-30% to-transparent to-50%" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black from-0% via-black/20 via-30% to-transparent to-50%" />
+          <div className="absolute inset-0 bg-linear-to-b from-black from-0% via-black/20 via-30% to-transparent to-50%" />
+          <div className="absolute inset-0 bg-linear-to-t from-black from-0% via-black/20 via-30% to-transparent to-50%" />
+          <div className="absolute inset-0 bg-linear-to-l from-black from-0% via-black/20 via-30% to-transparent to-50%" />
+          <div className="absolute inset-0 bg-linear-to-r from-black from-0% via-black/20 via-30% to-transparent to-50%" />
 
           <h1 className="pointer-events-none z-10 mt-20 text-9xl font-bold tracking-widest text-white" style={{ fontFamily: "'Cinzel', serif", textShadow: "0 0 20px rgba(180, 100, 255, 0.8), 0 0 60px rgba(180, 100, 255, 0.4)" }}>
             Monolit
@@ -92,19 +130,186 @@ function App() {
               fontFamily: "'Raleway', sans-serif",
               boxShadow: "0 0 25px rgba(168, 85, 247, 0.35), inset 0 0 25px rgba(168, 85, 247, 0.05)",
             }}
+            onClick={() => setfrontPage(false)}
           >
             ▷ Zagraj już teraz
           </button>
         </section>
 
-        <section id="gra" className="min-h-screen scroll-mt-20 bg-black text-white"></section>
-        <section id="technologia" className="min-h-screen scroll-mt-20 bg-black text-white"></section>
-        <section id="o-tworcy" className="min-h-screen scroll-mt-20 bg-black text-white"></section>
+        <section id="gra" className="flex min-h-screen items-center justify-center bg-black px-6 py-24 text-white">
+          <div className="group relative w-5xl rounded-2xl border border-white/10 bg-white/5 p-8">
+            <div className="pointer-events-none absolute inset-0 z-0 rounded-2xl bg-linear-to-b from-purple-900/0 to-purple-700/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <div className="relative z-10 mb-6">
+              <p className="text-sm font-medium tracking-[0.2em] text-purple-300 uppercase">O grze</p>
+              <h2 className="mt-3 text-4xl font-bold tracking-wide" style={{ fontFamily: "'Cinzel', serif" }}>
+                Monolit
+              </h2>
+              <p className="mt-4 text-justify text-sm leading-relaxed text-white/70"> Monolit to przeglądarkowe MMO osadzone w świetlistym, mrocznym świecie. Eksploruj biolumescencyjną kraine, rozbijaj monolity i rośnij w siłe - w walce w czasie rzeczywistym, ramię w ramię z innymi graczami. Bez instalacji: wystarczy otworzyć kartę przeglądarki.</p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {["MMO w przeglądarce", "Walka w czasie rzeczywistym", "Multiplayer"].map((tag) => (
+                  <span key={tag} className="rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-200">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="relative z-10 overflow-hidden rounded-xl border border-white/10 shadow-[0_0_80px_-20px_rgba(168,100,255,0.6)]">
+              <img src={gameplayimg_1} alt="Rozgrywka w Monolit" className="w-full transition-transform duration-300 group-hover:-translate-y-1" />
+            </div>
+          </div>
+        </section>
+
+        <section id="technologia" className="flex min-h-screen items-center justify-center bg-black px-6 py-24 text-white">
+          <div className="group relative flex w-5xl flex-row gap-10 rounded-2xl border border-white/10 bg-white/5 p-8">
+            <div className="w-2/3">
+              <div className="grid grid-cols-3 gap-4">
+                {stack.map(({ name, Icon, color }) => (
+                  <div key={name} className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-white/3 p-4 text-center transition hover:border-purple-400/40 hover:bg-purple-500/10">
+                    <Icon className="h-8 w-8" style={{ color }} />
+                    <span className="text-xs text-white/70">{name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="w-1/3">
+              <p className="text-sm font-medium tracking-[0.2em] text-purple-300 uppercase">TECHNOLOGIA</p>
+              <h2 className="mt-3 text-2xl font-bold tracking-wide" style={{ fontFamily: "'Cinzel', serif" }}>
+                Zbudowane od zera
+              </h2>
+              <div className="mt-4 space-y-6 text-white/70">
+                <div className="flex gap-3">
+                  <span className="mt-1 text-purple-400">▸</span>
+                  <p className="text-justify leading-relaxed">Przeglądarkowe MMO budowane w całości solo - frontend 3D, fizyka, serwer, multiplayer i baza danych.</p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="mt-1 text-purple-400">▸</span>
+                  <p className="text-justify leading-relaxed">Gracze widzą się w czasie rzeczywistym i dzielą jeden świat, którym zarządza autorytatywny serwer.</p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="mt-1 text-purple-400">▸</span>
+                  <p className="text-justify leading-relaxed">Całość w TypeScript, renderowana w przeglądarce i wdrożona online - bez instalacji po stronie gracza.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="o-tworcy" className="flex min-h-screen items-center justify-center bg-black px-6 py-24 text-white">
+          <div className="group relative w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-8 md:p-12">
+            <div className="pointer-events-none absolute inset-0 z-0 rounded-2xl bg-linear-to-br from-white/0 via-white/5 to-white/15 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+            <div className="relative z-10 flex flex-row items-center gap-8">
+              <div className="w-56 shrink-0 transition-transform duration-300 group-hover:-translate-y-1">
+                <div className="overflow-hidden rounded-xl border border-white/10 shadow-[0_0_80px_-20px_rgba(255,255,255,0.35)]">
+                  <img src={Profil} alt="Rafał Trzeciakowski" className="aspect-4/5 w-full" />
+                </div>
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-medium tracking-[0.2em] text-purple-300 uppercase">O twórcy</p>
+                <h2 className="mt-2 font-[Cinzel] text-4xl text-white">Rafał Trzeciakowski</h2>
+                <p className="mt-1 text-white/50">Full-stack developer & inżynier elektronik</p>
+
+                <div className="mt-5 space-y-4 text-justify leading-relaxed text-white/70">
+                  <p>Inżynier (Elektronika i Telekomunikacja) i magister (Systemy Elektroniczne w Mechatronice) Politechniki Wrocławskiej. Dziś przekuwam ten techniczny fundament - myślenie systemowe, rozkładanie problemów na części i dbałość o szczegóły w tworzenie aplikacji webowych.</p>
+                  <p>Monolit to dla mnie sprawdzian tej drogi w praktyce: od fizyki i renderowania 3D w przeglądarce, przez logikę rozgrywki, po serwer i bazę danych. Lubię budować rzeczy, które realnie działają i uczyć się, rozumiejąc, jak działają pod spodem.</p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-5">
+                <a href="https://github.com/RafalUxi" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
+                  <FiGithub className="h-5 w-5" />
+                </a>
+                <a href="https://linkedin.com/in/TWOJ_NICK" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
+                  <FiLinkedin className="h-5 w-5" />
+                </a>
+                <a href="mailto:rafal.trzeciakowski9090@o2.pl" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
+                  <FiMail className="h-5 w-5" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
 
-  if (token)
+  if (!frontPage) {
+    return (
+      <div className="relative h-screen w-full overflow-hidden bg-black">
+        <div className="absolute top-0 -right-5 z-10 h-screen w-1/3 rounded-4xl bg-linear-to-b from-pink-950 to-purple-950">
+          {login_menu === true && (
+            <div className="flex h-full flex-col items-center justify-center gap-4 text-white" style={{ fontFamily: "'Cinzel', serif" }}>
+              <h1 className="text-3xl">logowanie użytkownika</h1>
+              <div className="flex flex-row border-b">
+                <FiUser className="h-6 w-6" />
+                <input className="px-2 py-1 outline-none" type="text" placeholder="login" value={chatInput_login_login.slice(0, 16)} onChange={(e) => setChatInput_login_login(e.target.value)} />
+              </div>
+              <div className="flex flex-row border-b">
+                <FiLock className="h-5 w-5" />
+                <input className="px-2 py-1 outline-none" type="text" placeholder="hasło" value={chatInput_login_password.slice(0, 16)} onChange={(e) => setChatInput_login_password(e.target.value)} />
+              </div>
+              <button className="text-2xl hover:text-purple-200">Zaloguj</button>
+              <div className="text-1xl">
+                Nie masz konta?
+                <button
+                  className="text-purple-300 hover:text-purple-400"
+                  onClick={() => {
+                    setLogin(false);
+                    setRegister(true);
+                  }}
+                >
+                  Zarejestruj się!
+                </button>
+              </div>
+            </div>
+          )}
+          {register_menu === true && (
+            <div className="flex h-full flex-col items-center justify-center gap-4 text-white" style={{ fontFamily: "'Cinzel', serif" }}>
+              <h1 className="text-3xl">rejestracja użytkownika</h1>
+              <div className="flex flex-row border-b">
+                <FiUser className="h-6 w-6" />
+                <input className="px-2 py-1 outline-none" type="text" placeholder="login" value={chatInput_registger_login.slice(0, 16)} onChange={(e) => setChatInput_registger_login(e.target.value)} />
+              </div>
+              <div className="flex flex-row border-b">
+                <FiLock className="h-5 w-5" />
+                <input className="px-2 py-1 outline-none" type="text" placeholder="hasło" value={chatInput_registger_password.slice(0, 16)} onChange={(e) => setChatInput_registger_password(e.target.value)} />
+              </div>
+              <button className="text-2xl hover:text-purple-200">Zarejestruj</button>
+              <div className="text-1xl">
+                <button
+                  className="text-purple-300 hover:text-purple-400"
+                  onClick={() => {
+                    setLogin(true);
+                    setRegister(false);
+                  }}
+                >
+                  Powrót do logowania
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="absolute inset-0">
+          <Canvas camera={{ position: [10, 5, 10] }}>
+            <ambientLight intensity={3} color="#2a1040" />
+            <directionalLight position={[2.3, 4, 3]} intensity={10} color="#ffffff" />
+            <pointLight position={[5, 2, 7]} color="#ff00aa" intensity={60} decay={1} />
+            <pointLight position={[5, 3, 7]} color="#9333ea" intensity={30} decay={1} />
+
+            <group position={[5, 1, 7]} scale={2.3} rotation={[0, Math.PI / 3, 0]}>
+              {login_menu === true && <KnightLoggingAnimation action="dance1" />}
+              {register_menu === true && <KnightLoggingAnimation action="dance2" />}
+            </group>
+            <mesh position={[5, 1, 7]} rotation={[-Math.PI / 2, 0, 0]}>
+              <circleGeometry args={[8, 64]} />
+              <meshStandardMaterial color="#1a0a2e" emissive="#3b0764" emissiveIntensity={0.3} />
+            </mesh>
+          </Canvas>
+        </div>
+      </div>
+    );
+  }
+  if (!token)
     return (
       <div className="h-screen w-full bg-slate-900">
         <Canvas camera={{ position: [0, 5, 8] }}>

@@ -1,10 +1,10 @@
 import * as THREE from "three";
-import React, { useEffect } from "react";
-import { useGraph, createPortal } from "@react-three/fiber";
+import React, { useEffect, useRef } from "react";
+import { useGraph } from "@react-three/fiber";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { type GLTF, SkeletonUtils } from "three-stdlib";
 
-type ActionName = "attack" | "idle" | "run" | "slowrun" | "tpose" | "walk";
+type ActionName = "angry" | "dance1" | "dance2" | "tpose";
 
 interface GLTFAction extends THREE.AnimationClip {
   name: ActionName;
@@ -19,7 +19,6 @@ type GLTFResult = GLTF & {
     Leg_Atmor: THREE.SkinnedMesh;
     Shoulder_Armor: THREE.SkinnedMesh;
     spine: THREE.Bone;
-    handR: THREE.Bone;
   };
   materials: {
     ["Material.001"]: THREE.MeshStandardMaterial;
@@ -27,11 +26,9 @@ type GLTFResult = GLTF & {
   animations: GLTFAction[];
 };
 
-export function Knight({ action = "idle", ...props }) {
+export function KnightLoggingAnimation({ action = "dance1", ...props }) {
   const group = React.useRef<THREE.Group>(null);
-  const { scene, animations } = useGLTF("/knight.glb");
-  const { scene: swordScene } = useGLTF("/miecz.glb");
-  const swordClone = React.useMemo(() => swordScene.clone(true), [swordScene]);
+  const { scene, animations } = useGLTF("/knight_dance_front-transformed.glb");
   const clone = React.useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { nodes, materials } = useGraph(clone) as unknown as GLTFResult;
   const { actions } = useAnimations(animations, group);
@@ -50,7 +47,7 @@ export function Knight({ action = "idle", ...props }) {
       current.setEffectiveTimeScale(1);
       current.setEffectiveWeight(1);
 
-      if (action === "walk" || action === "idle" || action === "run" || action === "attack") {
+      if (action === "dance1" || action === "dance2") {
         current.setLoop(THREE.LoopRepeat, Infinity);
       } else {
         current.setLoop(THREE.LoopOnce, 1);
@@ -58,20 +55,11 @@ export function Knight({ action = "idle", ...props }) {
       }
     }
   }, [action, actions]);
-
   return (
-    <group {...props} ref={group} dispose={null}>
+    <group ref={group} {...props} dispose={null}>
       <group name="Scene">
-        <group name="tpose" position={[0.085, -0.178, -0.084]} rotation={[0.27, -0.931, 0.209]}>
+        <group name="Knight_metarig" position={[0, -0.004, 0]}>
           <primitive object={nodes.spine} />
-
-          {createPortal(
-            <group position={[0, 0.07, 0.16]} rotation={[Math.PI / 2, Math.PI, 0]} scale={0.35}>
-              <primitive object={swordClone} />
-            </group>,
-            nodes.handR,
-          )}
-
           <skinnedMesh name="Arm_Armor" geometry={nodes.Arm_Armor.geometry} material={materials["Material.001"]} skeleton={nodes.Arm_Armor.skeleton} />
           <skinnedMesh name="Belt" geometry={nodes.Belt.geometry} material={materials["Material.001"]} skeleton={nodes.Belt.skeleton} />
           <skinnedMesh name="Hand_Armor" geometry={nodes.Hand_Armor.geometry} material={materials["Material.001"]} skeleton={nodes.Hand_Armor.skeleton} />
@@ -84,4 +72,4 @@ export function Knight({ action = "idle", ...props }) {
   );
 }
 
-useGLTF.preload("/knight.glb");
+useGLTF.preload("/knight_dance_front-transformed.glb");
