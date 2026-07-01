@@ -20,7 +20,7 @@ import { Lilia_roz_pos } from "./map/map_scripts/lilia_roz_pos";
 import { OtherPlayer } from "../componenets/OtherPlayer";
 import gameplayimg_1 from "./graphics/gameplayimg_1.png";
 import Profil from "./graphics/Profil.jpg";
-import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiTailwindcss, SiVite } from "react-icons/si";
+import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiTailwindcss } from "react-icons/si";
 import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
 import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
@@ -46,6 +46,8 @@ function App() {
   const [chatInput_register_login, setChatInput_register_login] = useState<string>("");
   const [chatInput_login_password, setChatInput_login_password] = useState<string>("");
   const [chatInput_login_login, setChatInput_login_login] = useState<string>("");
+
+  // Autoryzacja
   const [token, setToken] = useState(localStorage.getItem("authToken"));
 
   const stack = [
@@ -85,7 +87,7 @@ function App() {
 
   const loginOutput = async () => {
     try {
-      const response = await fetch("http://localhost:5000/login", {
+      const response = await fetch("http://localhost:5000/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chatInput_login_login, chatInput_login_password }),
@@ -98,7 +100,7 @@ function App() {
         setToken(data.token);
       } else {
         setAlertLogin(true);
-        seterrMessageLogin(data.blad);
+        seterrMessageLogin(data.message);
         console.log("Błąd logowania");
       }
     } catch (err) {
@@ -108,10 +110,10 @@ function App() {
 
   const registerOutput = async () => {
     try {
-      const response = await fetch("http://localhost:5000/register", {
+      const response = await fetch("http://localhost:5000/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatInput_register_login, chatInput_login_password }),
+        body: JSON.stringify({ chatInput_register_login, chatInput_register_password }),
       });
       const data = await response.json();
       if (response.ok) {
@@ -119,7 +121,7 @@ function App() {
         setRegister(false);
       } else {
         setAlertRegister(true);
-        seterrMessageRegister(data.blad);
+        seterrMessageRegister(data.message);
         console.log("Błąd rejestracji");
       }
     } catch (err) {
@@ -267,7 +269,7 @@ function App() {
     );
   }
 
-  if (!frontPage) {
+  if (!frontPage && !token) {
     return (
       <div className="relative h-screen w-full overflow-hidden bg-black">
         <div className="absolute top-0 -right-5 z-10 h-screen w-1/3 rounded-4xl bg-linear-to-b from-pink-950 to-purple-950">
@@ -349,7 +351,7 @@ function App() {
       </div>
     );
   }
-  if (!token)
+  if (!frontPage && token)
     return (
       <div className="h-screen w-full bg-slate-900">
         <Canvas camera={{ position: [0, 5, 8] }}>
