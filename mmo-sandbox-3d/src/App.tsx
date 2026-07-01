@@ -6,7 +6,6 @@ import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { useEffect, useRef, useState } from "react";
 import { Stats } from "@react-three/drei";
 import { OrbitControls } from "@react-three/drei";
-import { PerspectiveCamera } from "@react-three/drei";
 import { PlayerController } from "../componenets/playerKeys";
 import { GrassPos } from "./map/map_scripts/Grass_pos";
 import { Mirror } from "./map/map_scripts/Mirror_pos";
@@ -21,24 +20,11 @@ import { Lilia_roz_pos } from "./map/map_scripts/lilia_roz_pos";
 import { OtherPlayer } from "../componenets/OtherPlayer";
 import gameplayimg_1 from "./graphics/gameplayimg_1.png";
 import Profil from "./graphics/Profil.jpg";
-import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiPostgresql, SiTailwindcss, SiVite } from "react-icons/si";
+import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiTailwindcss, SiVite } from "react-icons/si";
 import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
 import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
-
-import {
-  FiUser, // pole: nazwa użytkownika
-  FiLock, // pole: hasło
-  FiEye, // pokaż hasło
-  FiEyeOff, // ukryj hasło
-  FiLogIn, // przycisk: zaloguj
-  FiUserPlus, // przycisk: zarejestruj
-  FiX, // zamknij modal / wyczyść pole
-  FiAlertCircle, // błąd walidacji
-  FiCheck, // sukces
-} from "react-icons/fi";
-import { Knight } from "./animation/Knight";
-import { Cristal } from "./map/Cristal";
+import { FiUser, FiLock } from "react-icons/fi";
 
 function App() {
   // ruch - graczy online
@@ -52,8 +38,12 @@ function App() {
   // Menu
   const [login_menu, setLogin] = useState<boolean>(true);
   const [register_menu, setRegister] = useState<boolean>(false);
-  const [chatInput_registger_password, setChatInput_registger_password] = useState<string>("");
-  const [chatInput_registger_login, setChatInput_registger_login] = useState<string>("");
+  const [errMessageLogin, seterrMessageLogin] = useState<string>("");
+  const [errMessageRegister, seterrMessageRegister] = useState<string>("");
+  const [alertLogin, setAlertLogin] = useState<boolean>(false);
+  const [alertRegister, setAlertRegister] = useState<boolean>(false);
+  const [chatInput_register_password, setChatInput_register_password] = useState<string>("");
+  const [chatInput_register_login, setChatInput_register_login] = useState<string>("");
   const [chatInput_login_password, setChatInput_login_password] = useState<string>("");
   const [chatInput_login_login, setChatInput_login_login] = useState<string>("");
   const [token, setToken] = useState(localStorage.getItem("authToken"));
@@ -92,6 +82,50 @@ function App() {
       socketRef.current?.disconnect();
     };
   }, []);
+
+  const loginOutput = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatInput_login_login, chatInput_login_password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("authToken", data.token);
+        setToken(data.token);
+      } else {
+        setAlertLogin(true);
+        seterrMessageLogin(data.blad);
+        console.log("Błąd logowania");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const registerOutput = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatInput_register_login, chatInput_login_password }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setLogin(true);
+        setRegister(false);
+      } else {
+        setAlertRegister(true);
+        seterrMessageRegister(data.blad);
+        console.log("Błąd rejestracji");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   if (frontPage) {
     return (
@@ -248,7 +282,10 @@ function App() {
                 <FiLock className="h-5 w-5" />
                 <input className="px-2 py-1 outline-none" type="text" placeholder="hasło" value={chatInput_login_password.slice(0, 16)} onChange={(e) => setChatInput_login_password(e.target.value)} />
               </div>
-              <button className="text-2xl hover:text-purple-200">Zaloguj</button>
+              {alertLogin === true && <div className="font-bold">{errMessageLogin}</div>}
+              <button className="text-2xl hover:text-purple-200" onClick={loginOutput}>
+                Zaloguj
+              </button>
               <div className="text-1xl">
                 Nie masz konta?
                 <button
@@ -268,13 +305,16 @@ function App() {
               <h1 className="text-3xl">rejestracja użytkownika</h1>
               <div className="flex flex-row border-b">
                 <FiUser className="h-6 w-6" />
-                <input className="px-2 py-1 outline-none" type="text" placeholder="login" value={chatInput_registger_login.slice(0, 16)} onChange={(e) => setChatInput_registger_login(e.target.value)} />
+                <input className="px-2 py-1 outline-none" type="text" placeholder="login" value={chatInput_register_login.slice(0, 16)} onChange={(e) => setChatInput_register_login(e.target.value)} />
               </div>
               <div className="flex flex-row border-b">
                 <FiLock className="h-5 w-5" />
-                <input className="px-2 py-1 outline-none" type="text" placeholder="hasło" value={chatInput_registger_password.slice(0, 16)} onChange={(e) => setChatInput_registger_password(e.target.value)} />
+                <input className="px-2 py-1 outline-none" type="text" placeholder="hasło" value={chatInput_register_password.slice(0, 16)} onChange={(e) => setChatInput_register_password(e.target.value)} />
               </div>
-              <button className="text-2xl hover:text-purple-200">Zarejestruj</button>
+              {alertRegister === true && <div className="font-bold">{errMessageRegister}</div>}
+              <button className="text-2xl hover:text-purple-200" onClick={registerOutput}>
+                Zarejestruj
+              </button>
               <div className="text-1xl">
                 <button
                   className="text-purple-300 hover:text-purple-400"
@@ -297,8 +337,8 @@ function App() {
             <pointLight position={[5, 3, 7]} color="#9333ea" intensity={30} decay={1} />
 
             <group position={[5, 1, 7]} scale={2.3} rotation={[0, Math.PI / 3, 0]}>
-              {login_menu === true && <KnightLoggingAnimation action="dance1" />}
-              {register_menu === true && <KnightLoggingAnimation action="dance2" />}
+              {login_menu === true && <KnightLoggingAnimation action="dance2" />}
+              {register_menu === true && <KnightLoggingAnimation action="dance1" />}
             </group>
             <mesh position={[5, 1, 7]} rotation={[-Math.PI / 2, 0, 0]}>
               <circleGeometry args={[8, 64]} />
