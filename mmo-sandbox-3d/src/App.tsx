@@ -20,6 +20,11 @@ import { Lilia_roz_pos } from "./map/map_scripts/lilia_roz_pos";
 import { OtherPlayer } from "../componenets/OtherPlayer";
 import gameplayimg_1 from "./graphics/gameplayimg_1.png";
 import Profil from "./graphics/Profil.jpg";
+import CasinoImg from "./graphics/casino.png";
+import GoldUI from "./graphics/UI/ikonaGold.png";
+import CasinoUI from "./graphics/UI/ikonaCas.png";
+import CzatUI from "./graphics/UI/ikonaCzat.png";
+import EqUI from "./graphics/UI/ikonaEkwipunek.png";
 import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiTailwindcss } from "react-icons/si";
 import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
@@ -49,6 +54,9 @@ function App() {
 
   // Autoryzacja
   const [token, setToken] = useState(localStorage.getItem("authToken"));
+
+  // Gameplay
+  const [gold, SetGold] = useState<number>(100);
 
   const stack = [
     { name: "React Three Fiber", Icon: SiReact, color: "#61DAFB" },
@@ -353,7 +361,33 @@ function App() {
   }
   if (!frontPage && token)
     return (
-      <div className="h-screen w-full bg-slate-900">
+      <div className="h-screen w-full">
+        <img src={GoldUI} alt="Gold" className="absolute right-0 bottom-0 z-10 h-50 w-80" />
+        <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute right-0 bottom-0 z-10 mr-40 mb-19.5 text-4xl text-yellow-600">
+          {gold}
+        </span>
+        <div className="absolute z-10 flex h-screen w-25 flex-col justify-end bg-transparent">
+          <div className="overflow-hidden rounded-4xl border-4 border-violet-950">
+            <div className="group/eq">
+              <img src={EqUI} alt="UI_EQ" className="h-25 w-25" />
+              <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute bottom-0 left-0 mb-60 ml-25 rounded-2xl border-2 border-violet-950 bg-black px-2 text-sm whitespace-nowrap text-white opacity-0 transition-opacity group-hover/eq:opacity-100">
+                Ekwipunek
+              </span>
+            </div>
+            <div className="group/czat">
+              <img src={CzatUI} alt="UI_Czat" className="h-25 w-25" />
+              <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute bottom-0 left-0 mb-35 ml-25 rounded-2xl border-2 border-violet-950 bg-black px-2 text-sm whitespace-nowrap text-white opacity-0 transition-opacity group-hover/czat:opacity-100">
+                Znajomi/Czat
+              </span>
+            </div>
+            <div className="group/kasyno">
+              <img src={CasinoUI} alt="UI_Kasyno" className="h-25 w-25" />
+              <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute bottom-0 left-0 mb-10 ml-25 rounded-2xl border-2 border-violet-950 bg-black px-2 text-sm whitespace-nowrap text-white opacity-0 transition-opacity group-hover/kasyno:opacity-100">
+                Kasyno
+              </span>
+            </div>
+          </div>
+        </div>
         <Canvas camera={{ position: [0, 5, 8] }}>
           <ambientLight intensity={10} color="#4a2480" />
           <color attach="background" args={["#000000"]} />
