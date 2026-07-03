@@ -57,12 +57,13 @@ function App() {
   const [isOpenCasino, setIsOpenCasino] = useState<boolean>(false);
   const [multiplier, setMultiplier] = useState<number>(1);
   const [goldInput, setGoldInput] = useState<number>(10);
+  const [isLosuj, setIsLosuj] = useState<boolean>(true);
 
   // Autoryzacja
   const [token, setToken] = useState(localStorage.getItem("authToken"));
 
   // Gameplay
-  const [gold, SetGold] = useState<number>(100);
+  const [gold, setGold] = useState<number>(100);
 
   const stack = [
     { name: "React Three Fiber", Icon: SiReact, color: "#61DAFB" },
@@ -88,6 +89,14 @@ function App() {
       if (dane.id !== socketRef.current?.id) {
         setPlayerIds((prev) => (prev.includes(dane.id) ? prev : [...prev, dane.id]));
         otherPlayers.current.set(dane.id, { x: dane.x, y: dane.y, z: dane.z, action: dane.action, rotation: dane.rotation });
+      }
+    });
+
+    socketRef.current.on("casinoResult", (dane) => {
+      if (dane.success === true) {
+        setGold(dane.gold);
+      } else if (dane.success === false) {
+        console.log(dane.message);
       }
     });
 
@@ -409,9 +418,28 @@ function App() {
                 <span className="text-3xl font-medium text-yellow-600">{multiplier}</span>
               </div>
               <div className="absolute bottom-0 left-0 mb-58 ml-91 rounded-2xl">
-                <button className="text-5xl font-medium text-yellow-600 hover:text-violet-900" onClick={() => socketRef.current?.emit("casinoStart", { event: "Casino", goldInput: goldInput })}>
-                  Start
-                </button>
+                {isLosuj === true && (
+                  <button
+                    className="text-5xl font-medium text-yellow-600 hover:text-yellow-500"
+                    onClick={() => {
+                      socketRef.current?.emit("casinoStart", { event: "Start", goldInput: goldInput });
+                      setIsLosuj(false);
+                    }}
+                  >
+                    Start
+                  </button>
+                )}
+                {isLosuj === false && (
+                  <button
+                    className="text-5xl font-medium text-yellow-600 hover:text-yellow-500"
+                    onClick={() => {
+                      socketRef.current?.emit("casinoStart", { event: "Stop", goldInput: goldInput });
+                      setIsLosuj(true);
+                    }}
+                  >
+                    Stop
+                  </button>
+                )}
               </div>
             </div>
           </div>

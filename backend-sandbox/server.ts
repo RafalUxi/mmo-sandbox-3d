@@ -5,8 +5,10 @@ import { createServer } from "http";
 import express from "express";
 import cors from "cors";
 import { Server, Socket } from "socket.io";
+import crypto from "node:crypto";
 import { authRouter } from "./routes/auth";
 import jwt from "jsonwebtoken";
+import { pool } from "./config/db";
 
 const SECRET_KEY = process.env.SECRET_KEY;
 
@@ -68,9 +70,24 @@ io.on("connection", (socket: CustomSocket) => {
   socket.on("casinoStart", async (dane) => {
     if (activeCasinoSessions.has(socket.id)) return;
     activeCasinoSessions.add(socket.id); // Blokada przed duplikatami wysyły start (cheat)
-
-    console.log(socket.id);
     try {
+      const playerId = socket.userId;
+      const goldInput = dane.goldInput;
+      let multiplier = 1;
+
+      const result = await pool.query("SELECT gold FROM player_stats WHERE user_id = $1", [playerId]);
+
+      if (result.rows.length === 0) {
+        return socket.emit("casinoResult", { success: false, message: "Nie znaleziono gracza w bazie!" });
+      }
+
+      const currentGold = result.rows[0].gold;
+
+      if (currentGold > 0 && dane.event === "Start") {
+        return socket.emit("casinoResult", { success: true });
+      } else {
+        return socket.emit("casinoResult", { success: false, message: "Brak złota na koncie!" });
+      }
     } finally {
       activeCasinoSessions.delete(socket.id);
     }
