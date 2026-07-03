@@ -6,6 +6,13 @@ import express from "express";
 import cors from "cors";
 import { Server, Socket } from "socket.io";
 import { authRouter } from "./routes/auth";
+import jwt from "jsonwebtoken";
+
+const SECRET_KEY = process.env.SECRET_KEY;
+
+if (!SECRET_KEY) {
+  throw new Error("BRAK KLUCZA SECRET_KEY W PLIKU .env");
+}
 
 const app = express();
 app.use(cors());
@@ -29,8 +36,26 @@ interface CustomSocket extends Socket {
   userId?: number;
 }
 
+io.use((socket: CustomSocket, next) => {
+  const token = socket.handshake.auth.token;
+
+  if (!token) {
+    return next(new Error("Brak tokena"));
+  }
+
+  try {
+    const zdekodowany = jwt.verify(token, SECRET_KEY) as { userId: number };
+
+    socket.userId = zdekodowany.userId;
+
+    next();
+  } catch (err) {
+    next(new Error("Nieważny token!"));
+  }
+});
+
 io.on("connection", (socket: CustomSocket) => {
-  console.log(`✅ Nawiązano połączenie WebSocket! ID kabla: ${socket.id}`);
+  console.log(`✅ Nawiązano połączenie WebSocket! ID kabla: ${socket.id} id gracza: ${socket.userId}`);
   socket.on("sendMessage", (dane) => {
     try {
       io.emit("playerMove", { id: socket.id, x: dane.x, y: dane.y, z: dane.z, action: dane.action, rotation: dane.rotation });
@@ -38,8 +63,22 @@ io.on("connection", (socket: CustomSocket) => {
       console.log("Błąd socket");
     }
   });
+
+  const activeCasinoSessions = new Set<string>();
+  socket.on("casinoStart", async (dane) => {
+    if (activeCasinoSessions.has(socket.id)) return;
+    activeCasinoSessions.add(socket.id); // Blokada przed duplikatami wysyły start (cheat)
+
+    console.log(socket.id);
+    try {
+    } finally {
+      activeCasinoSessions.delete(socket.id);
+    }
+  });
+
   socket.on("disconnect", () => {
     io.emit("disconnectPlayer", { id: socket.id });
+    activeCasinoSessions.delete(socket.id);
     console.log(`❌ Rozłączono: ${socket.id}`);
   });
 });

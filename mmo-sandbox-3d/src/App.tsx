@@ -80,7 +80,9 @@ function App() {
   ];
 
   useEffect(() => {
-    socketRef.current = io("http://localhost:5000");
+    if (!token) return;
+
+    socketRef.current = io("http://localhost:5000", { auth: { token: token } });
 
     socketRef.current.on("playerMove", (dane) => {
       if (dane.id !== socketRef.current?.id) {
@@ -97,7 +99,7 @@ function App() {
     return () => {
       socketRef.current?.disconnect();
     };
-  }, []);
+  }, [token]);
 
   const loginOutput = async () => {
     try {
@@ -407,7 +409,7 @@ function App() {
                 <span className="text-3xl font-medium text-yellow-600">{multiplier}</span>
               </div>
               <div className="absolute bottom-0 left-0 mb-58 ml-91 rounded-2xl">
-                <button className="text-5xl font-medium text-yellow-600 hover:text-violet-900" onClick={() => socketRef.current?.emit("casinoStart", { event: "Casino", gold: goldInput })}>
+                <button className="text-5xl font-medium text-yellow-600 hover:text-violet-900" onClick={() => socketRef.current?.emit("casinoStart", { event: "Casino", goldInput: goldInput })}>
                   Start
                 </button>
               </div>
