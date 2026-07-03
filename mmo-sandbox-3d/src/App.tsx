@@ -20,7 +20,8 @@ import { Lilia_roz_pos } from "./map/map_scripts/lilia_roz_pos";
 import { OtherPlayer } from "../componenets/OtherPlayer";
 import gameplayimg_1 from "./graphics/gameplayimg_1.png";
 import Profil from "./graphics/Profil.jpg";
-import CasinoImg from "./graphics/casino.png";
+import CasinoImg from "./graphics/Casino.png";
+import CasinoExit from "./graphics/CasinoEXT.png";
 import GoldUI from "./graphics/UI/ikonaGold.png";
 import CasinoUI from "./graphics/UI/ikonaCas.png";
 import CzatUI from "./graphics/UI/ikonaCzat.png";
@@ -51,6 +52,11 @@ function App() {
   const [chatInput_register_login, setChatInput_register_login] = useState<string>("");
   const [chatInput_login_password, setChatInput_login_password] = useState<string>("");
   const [chatInput_login_login, setChatInput_login_login] = useState<string>("");
+
+  // UI
+  const [isOpenCasino, setIsOpenCasino] = useState<boolean>(false);
+  const [multiplier, setMultiplier] = useState<number>(1);
+  const [goldInput, setGoldInput] = useState<number>(10);
 
   // Autoryzacja
   const [token, setToken] = useState(localStorage.getItem("authToken"));
@@ -381,13 +387,34 @@ function App() {
               </span>
             </div>
             <div className="group/kasyno">
-              <img src={CasinoUI} alt="UI_Kasyno" className="h-25 w-25" />
+              <img src={CasinoUI} alt="UI_Kasyno" onClick={() => setIsOpenCasino(true)} className="h-25 w-25" />
               <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute bottom-0 left-0 mb-10 ml-25 rounded-2xl border-2 border-violet-950 bg-black px-2 text-sm whitespace-nowrap text-white opacity-0 transition-opacity group-hover/kasyno:opacity-100">
                 Kasyno
               </span>
             </div>
           </div>
         </div>
+        {isOpenCasino && (
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
+            <div style={{ backgroundImage: `url(${CasinoImg})`, backgroundSize: "cover", backgroundPosition: "center" }} className="pointer-events-auto relative h-155 w-210 overflow-hidden rounded-2xl">
+              <div className="flex justify-end">
+                <button style={{ backgroundImage: `url(${CasinoExit})`, backgroundSize: "cover", backgroundPosition: "center" }} className="m-2 h-10 w-10 hover:bg-blue-200/10" onClick={() => setIsOpenCasino(false)}></button>
+              </div>
+              <div className="absolute bottom-0 left-0 mb-5.5 ml-75">
+                <input className="h-6 w-24 [appearance:textfield] bg-transparent text-3xl font-medium text-yellow-600 outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" type="number" value={goldInput === 0 ? "" : goldInput} onChange={(e) => setGoldInput(Number(e.target.value))} />
+              </div>
+              <div className="pointer-events-none absolute bottom-0 left-0 mb-5.5 ml-120">
+                <span className="text-3xl font-medium text-yellow-600">{multiplier}</span>
+              </div>
+              <div className="absolute bottom-0 left-0 mb-58 ml-91 rounded-2xl">
+                <button className="text-5xl font-medium text-yellow-600 hover:text-violet-900" onClick={() => socketRef.current?.emit("casinoStart", { event: "Casino", gold: goldInput })}>
+                  Start
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Canvas camera={{ position: [0, 5, 8] }}>
           <ambientLight intensity={10} color="#4a2480" />
           <color attach="background" args={["#000000"]} />
