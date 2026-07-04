@@ -58,6 +58,7 @@ function App() {
   const [multiplier, setMultiplier] = useState<number>(1);
   const [goldInput, setGoldInput] = useState<number>(10);
   const [isLosuj, setIsLosuj] = useState<boolean>(true);
+  const [casinoErr, setCasinoErr] = useState<boolean>(false);
 
   // Autoryzacja
   const [token, setToken] = useState(localStorage.getItem("authToken"));
@@ -94,10 +95,22 @@ function App() {
 
     socketRef.current.on("casinoResult", (dane) => {
       if (dane.success === true) {
+        setCasinoErr(false);
         setGold(dane.gold);
+        if (dane.message === "Crash") {
+          setIsLosuj(true);
+        }
+        console.log(dane.message);
       } else if (dane.success === false) {
+        setCasinoErr(true);
+        setIsLosuj(true);
+        console.log(isLosuj);
         console.log(dane.message);
       }
+    });
+
+    socketRef.current.on("casinoUpdateMultiplier", (dane) => {
+      setMultiplier(dane.currentMultiplier);
     });
 
     socketRef.current.on("disconnectPlayer", (dane) => {
@@ -415,8 +428,14 @@ function App() {
                 <input className="h-6 w-24 [appearance:textfield] bg-transparent text-3xl font-medium text-yellow-600 outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" type="number" value={goldInput === 0 ? "" : goldInput} onChange={(e) => setGoldInput(Number(e.target.value))} />
               </div>
               <div className="pointer-events-none absolute bottom-0 left-0 mb-5.5 ml-120">
-                <span className="text-3xl font-medium text-yellow-600">{multiplier}</span>
+                <span className="text-3xl font-medium text-yellow-600">{Math.floor(multiplier * 100) / 100}</span>
               </div>
+              {casinoErr === true && (
+                <div className="pointer-events-none absolute bottom-0 left-0 mb-6.5 ml-64">
+                  <span className="text-xl font-medium text-yellow-500">❌</span>
+                </div>
+              )}
+
               <div className="absolute bottom-0 left-0 mb-58 ml-91 rounded-2xl">
                 {isLosuj === true && (
                   <button
@@ -433,7 +452,7 @@ function App() {
                   <button
                     className="text-5xl font-medium text-yellow-600 hover:text-yellow-500"
                     onClick={() => {
-                      socketRef.current?.emit("casinoStart", { event: "Stop", goldInput: goldInput });
+                      socketRef.current?.emit("casinoStop", { event: "Stop" });
                       setIsLosuj(true);
                     }}
                   >
