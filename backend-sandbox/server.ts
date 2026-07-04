@@ -76,7 +76,7 @@ io.on("connection", (socket: CustomSocket) => {
     activeCasinoSessions.add(socket.id); // Blokada przed duplikatami wysyły start (cheat)
     try {
       const playerId = socket.userId;
-      const house_edge = 0.03;
+      const house_edge = 0.05;
       goldInput = dane.goldInput;
 
       const result = await pool.query("SELECT gold FROM player_stats WHERE user_id = $1", [playerId]);
@@ -110,7 +110,7 @@ io.on("connection", (socket: CustomSocket) => {
           }
 
           socket.emit("casinoUpdateMultiplier", { currentMultiplier: multiplier });
-        }, 75);
+        }, 60);
 
         return socket.emit("casinoResult", { success: true, message: "Poprawnie rozpocząto grę", gold: currentGold });
       } else {
@@ -139,12 +139,14 @@ io.on("connection", (socket: CustomSocket) => {
         }
 
         let currentGold = result.rows[0].gold;
+        const currentGoldHolder = currentGold;
+
         currentGold = Math.floor(currentGold - goldInput + goldInput * multiplier);
         multiplier = 1;
         socket.emit("casinoUpdateMultiplier", { currentMultiplier: 1 });
 
         await pool.query("UPDATE player_stats SET gold = $1 WHERE user_id = $2", [currentGold, playerId]);
-        return socket.emit("casinoResult", { success: true, message: `Wygrana: ${currentGold}`, gold: currentGold });
+        return socket.emit("casinoResult", { success: true, message: `Win`, gold: currentGold, winGold: currentGold - currentGoldHolder });
       } else {
         return socket.emit("casinoResult", { success: false, message: "Błąd zatrzymania gry" });
       }

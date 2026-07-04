@@ -3,7 +3,7 @@ import { Physics } from "@react-three/rapier";
 import { io } from "socket.io-client";
 import { Socket } from "socket.io-client";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { Stats } from "@react-three/drei";
 import { OrbitControls } from "@react-three/drei";
 import { PlayerController } from "../componenets/playerKeys";
@@ -59,6 +59,7 @@ function App() {
   const [goldInput, setGoldInput] = useState<number>(10);
   const [isLosuj, setIsLosuj] = useState<boolean>(true);
   const [casinoErr, setCasinoErr] = useState<boolean>(false);
+  const [isWinCasino, setIsWinCasino] = useState<string | null>(null);
 
   // Autoryzacja
   const [token, setToken] = useState(localStorage.getItem("authToken"));
@@ -98,9 +99,14 @@ function App() {
         setCasinoErr(false);
         setGold(dane.gold);
         if (dane.message === "Crash") {
+          setIsWinCasino(`Przegrałeś zakład`);
+          setTimeout(() => setIsWinCasino(null), 3000);
           setIsLosuj(true);
         }
-        console.log(dane.message);
+        if (dane.message === "Win") {
+          setIsWinCasino(`Wygrałeś ${dane.winGold} golda!`);
+          setTimeout(() => setIsWinCasino(null), 3000);
+        }
       } else if (dane.success === false) {
         setCasinoErr(true);
         setIsLosuj(true);
@@ -430,6 +436,13 @@ function App() {
               <div className="pointer-events-none absolute bottom-0 left-0 mb-5.5 ml-120">
                 <span className="text-3xl font-medium text-yellow-600">{Math.floor(multiplier * 100) / 100}</span>
               </div>
+              {isWinCasino !== null && (
+                <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 rounded-xl bg-black/70 px-6 py-3 whitespace-nowrap backdrop-blur-sm">
+                  <span style={{ fontFamily: "'Cinzel', serif", textShadow: "0 0 20px #facc15" }} className="text-3xl font-black tracking-widest text-yellow-400">
+                    {isWinCasino}
+                  </span>
+                </div>
+              )}
               {casinoErr === true && (
                 <div className="pointer-events-none absolute bottom-0 left-0 mb-6.5 ml-64">
                   <span className="text-xl font-medium text-yellow-500">❌</span>
