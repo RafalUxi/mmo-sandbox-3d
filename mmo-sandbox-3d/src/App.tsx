@@ -100,12 +100,12 @@ function App() {
         setGold(dane.gold);
         if (dane.message === "Crash") {
           setIsWinCasino(`Przegrałeś zakład`);
-          setTimeout(() => setIsWinCasino(null), 3000);
+          setTimeout(() => setIsWinCasino(null), 1500);
           setIsLosuj(true);
         }
         if (dane.message === "Win") {
           setIsWinCasino(`Wygrałeś ${dane.winGold} golda!`);
-          setTimeout(() => setIsWinCasino(null), 3000);
+          setTimeout(() => setIsWinCasino(null), 1500);
         }
       } else if (dane.success === false) {
         setCasinoErr(true);
@@ -430,10 +430,10 @@ function App() {
               <div className="flex justify-end">
                 <button style={{ backgroundImage: `url(${CasinoExit})`, backgroundSize: "cover", backgroundPosition: "center" }} className="m-2 h-10 w-10 hover:bg-blue-200/10" onClick={() => setIsOpenCasino(false)}></button>
               </div>
-              <div className="absolute bottom-0 left-0 mb-5.5 ml-75">
+              <div className="absolute bottom-0 left-0 mb-4.5 ml-75">
                 <input className="h-6 w-24 [appearance:textfield] bg-transparent text-3xl font-medium text-yellow-600 outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" type="number" value={goldInput === 0 ? "" : goldInput} onChange={(e) => setGoldInput(Number(e.target.value))} />
               </div>
-              <div className="pointer-events-none absolute bottom-0 left-0 mb-5.5 ml-120">
+              <div className="pointer-events-none absolute bottom-0 left-0 mb-4.5 ml-120">
                 <span className="text-3xl font-medium text-yellow-600">{Math.floor(multiplier * 100) / 100}</span>
               </div>
               {isWinCasino !== null && (
@@ -444,7 +444,7 @@ function App() {
                 </div>
               )}
               {casinoErr === true && (
-                <div className="pointer-events-none absolute bottom-0 left-0 mb-6.5 ml-64">
+                <div className="pointer-events-none absolute bottom-0 left-0 mb-5.5 ml-63">
                   <span className="text-xl font-medium text-yellow-500">❌</span>
                 </div>
               )}
