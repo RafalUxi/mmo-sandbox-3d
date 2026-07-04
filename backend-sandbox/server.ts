@@ -86,6 +86,11 @@ io.on("connection", (socket: CustomSocket) => {
         return socket.emit("casinoResult", { success: false, message: "Nie znaleziono gracza w bazie!" });
       }
 
+      if (goldInput <= 0) {
+        activeCasinoSessions.delete(socket.id);
+        return socket.emit("casinoResult", { success: false, message: "Źle wpisana wartośc golda" });
+      }
+
       let currentGold = result.rows[0].gold;
 
       if (currentGold > goldInput && dane.event === "Start") {

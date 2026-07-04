@@ -110,7 +110,6 @@ function App() {
       } else if (dane.success === false) {
         setCasinoErr(true);
         setIsLosuj(true);
-        console.log(isLosuj);
         console.log(dane.message);
       }
     });
@@ -431,7 +430,17 @@ function App() {
                 <button style={{ backgroundImage: `url(${CasinoExit})`, backgroundSize: "cover", backgroundPosition: "center" }} className="m-2 h-10 w-10 hover:bg-blue-200/10" onClick={() => setIsOpenCasino(false)}></button>
               </div>
               <div className="absolute bottom-0 left-0 mb-4.5 ml-75">
-                <input className="h-6 w-24 [appearance:textfield] bg-transparent text-3xl font-medium text-yellow-600 outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" type="number" value={goldInput === 0 ? "" : goldInput} onChange={(e) => setGoldInput(Number(e.target.value))} />
+                <input
+                  className="h-6 w-24 [appearance:textfield] bg-transparent text-3xl font-medium text-yellow-600 outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  type="number"
+                  value={goldInput === 0 ? "" : goldInput}
+                  onChange={(e) => {
+                    const newValue = Number(e.target.value);
+                    setGoldInput(newValue);
+                    if (newValue > gold || newValue <= 0) setCasinoErr(true);
+                    else setCasinoErr(false);
+                  }}
+                />
               </div>
               <div className="pointer-events-none absolute bottom-0 left-0 mb-4.5 ml-120">
                 <span className="text-3xl font-medium text-yellow-600">{Math.floor(multiplier * 100) / 100}</span>
