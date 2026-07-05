@@ -3,7 +3,7 @@ import { Physics } from "@react-three/rapier";
 import { io } from "socket.io-client";
 import { Socket } from "socket.io-client";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
-import { use, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Stats } from "@react-three/drei";
 import { OrbitControls } from "@react-three/drei";
 import { PlayerController } from "../componenets/playerKeys";
@@ -31,6 +31,7 @@ import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
 import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
 import { FiUser, FiLock } from "react-icons/fi";
+import { fetchPlayerStats } from "./fetch/player";
 
 function App() {
   // ruch - graczy online
@@ -66,6 +67,7 @@ function App() {
 
   // Gameplay
   const [gold, setGold] = useState<number>(100);
+  const [inventory, setInventory] = useState();
 
   const stack = [
     { name: "React Three Fiber", Icon: SiReact, color: "#61DAFB" },
@@ -81,6 +83,19 @@ function App() {
     { name: "Blender", Icon: SiBlender, color: "#E97451" },
     { name: "Git", Icon: SiGit, color: "#F05032" },
   ];
+
+  // START GRY - Pobieramy wszystko z serwera
+  useEffect(() => {
+    if (!token) return;
+
+    const load = async () => {
+      const playerData = await fetchPlayerStats(token);
+      setGold(playerData.gold);
+      setInventory(playerData.inventory);
+    };
+
+    load();
+  }, [token]);
 
   useEffect(() => {
     if (!token) return;

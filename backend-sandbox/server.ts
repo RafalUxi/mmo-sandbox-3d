@@ -7,6 +7,7 @@ import cors from "cors";
 import { Server, Socket } from "socket.io";
 import crypto from "node:crypto";
 import { authRouter } from "./routes/auth";
+import { playerRouter } from "./routes/player";
 import jwt from "jsonwebtoken";
 import { pool } from "./config/db";
 
@@ -22,6 +23,7 @@ app.use(express.json());
 
 // Router - endpoints
 app.use("/auth", authRouter);
+app.use("/player", playerRouter);
 
 // do tego websocekt może się podpiąć
 const httpServer = createServer(app);
@@ -129,7 +131,7 @@ io.on("connection", (socket: CustomSocket) => {
   });
 
   socket.on("casinoStop", async (dane) => {
-    if (intervalId === null) return;
+    if (intervalId === null) return; // Gra musi być otwarta żeby zatrzymac
     activeCasinoSessions.delete(socket.id);
     try {
       const playerId = socket.userId;
