@@ -1,9 +1,4 @@
-export interface IShop {
-  id: number;
-  nazwa: string;
-  typ: "Broń";
-  cena: number;
-}
+import { type IShop } from "../../../shared/types";
 
 export const fetchPlayerStats = async (token: string) => {
   const res = await fetch("http://localhost:5000/player/stats", {

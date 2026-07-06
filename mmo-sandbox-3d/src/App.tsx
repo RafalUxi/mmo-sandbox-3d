@@ -36,21 +36,9 @@ import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
 import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
 import { FiUser, FiLock } from "react-icons/fi";
-import { fetchPlayerStats, buyItem, type IShop } from "./fetch/player";
-
-interface IItem {
-  id: number;
-  nazwa: string;
-  typ: "Broń";
-  ilosc: number;
-  poziom: number;
-}
-
-const shopList: IShop[] = [
-  { id: 101, nazwa: "Długi Miecz", typ: "Broń", cena: 10 },
-  { id: 102, nazwa: "Miecz Dusz", typ: "Broń", cena: 50 },
-  { id: 103, nazwa: "Monolit Slayer", typ: "Broń", cena: 100 },
-];
+import { fetchPlayerStats, buyItem } from "./fetch/player";
+import { type IItem, type IShop } from "../../shared/types";
+import { shopList } from "../../shared/ItemsList";
 
 function App() {
   // ruch - graczy online
