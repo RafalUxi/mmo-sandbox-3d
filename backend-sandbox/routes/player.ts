@@ -7,7 +7,6 @@ export const playerRouter = Router();
 playerRouter.post("/stats", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const playerId = req.user.userId;
-    console.log(playerId);
 
     const result = await pool.query("SELECT * FROM player_stats WHERE user_id = $1", [playerId]);
 

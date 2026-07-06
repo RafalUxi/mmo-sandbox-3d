@@ -26,12 +26,31 @@ import GoldUI from "./graphics/UI/ikonaGold.png";
 import CasinoUI from "./graphics/UI/ikonaCas.png";
 import CzatUI from "./graphics/UI/ikonaCzat.png";
 import EqUI from "./graphics/UI/ikonaEkwipunek.png";
+import ShopUI from "./graphics/UI/ikonaSklep.png";
+import ShopImg from "./graphics/sklep.png";
+import dlugi_miecz from "./graphics/swords/długi_miecz.png";
+import miecz_dusz from "./graphics/swords/Miecz_dusz.png";
+import monolit_slayer from "./graphics/swords/monolit_slayer.png";
 import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiTailwindcss } from "react-icons/si";
 import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
 import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
 import { FiUser, FiLock } from "react-icons/fi";
-import { fetchPlayerStats } from "./fetch/player";
+import { fetchPlayerStats, buyItem, type IShop } from "./fetch/player";
+
+interface IItem {
+  id: number;
+  nazwa: string;
+  typ: "Broń";
+  ilosc: number;
+  poziom: number;
+}
+
+const shopList: IShop[] = [
+  { id: 101, nazwa: "Długi Miecz", typ: "Broń", cena: 10 },
+  { id: 102, nazwa: "Miecz Dusz", typ: "Broń", cena: 50 },
+  { id: 103, nazwa: "Monolit Slayer", typ: "Broń", cena: 100 },
+];
 
 function App() {
   // ruch - graczy online
@@ -54,7 +73,16 @@ function App() {
   const [chatInput_login_password, setChatInput_login_password] = useState<string>("");
   const [chatInput_login_login, setChatInput_login_login] = useState<string>("");
 
-  // UI
+  // UI - EQ
+  const [isOpenEq, setIsOpenEq] = useState<boolean>(false);
+
+  // UI - Shop
+  const [isOpenShop, setIsOpenShop] = useState<boolean>(false);
+
+  // UI - Chat
+  const [isOpenChat, setIsOpenChat] = useState<boolean>(false);
+
+  // UI - casino
   const [isOpenCasino, setIsOpenCasino] = useState<boolean>(false);
   const [multiplier, setMultiplier] = useState<number>(1);
   const [goldInput, setGoldInput] = useState<number>(10);
@@ -67,7 +95,7 @@ function App() {
 
   // Gameplay
   const [gold, setGold] = useState<number>(100);
-  const [inventory, setInventory] = useState();
+  const [inventory, setInventory] = useState<IItem[]>([]);
 
   const stack = [
     { name: "React Three Fiber", Icon: SiReact, color: "#61DAFB" },
@@ -185,6 +213,13 @@ function App() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleBuyItem = async (item: IShop) => {
+    if (!token) return;
+    const dane = await buyItem(item, token);
+    setGold(dane.gold);
+    setInventory(dane.inventory);
   };
 
   if (frontPage) {
@@ -419,13 +454,19 @@ function App() {
         <div className="absolute z-10 flex h-screen w-25 flex-col justify-end bg-transparent">
           <div className="overflow-hidden rounded-4xl border-4 border-violet-950">
             <div className="group/eq">
-              <img src={EqUI} alt="UI_EQ" className="h-25 w-25" />
-              <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute bottom-0 left-0 mb-60 ml-25 rounded-2xl border-2 border-violet-950 bg-black px-2 text-sm whitespace-nowrap text-white opacity-0 transition-opacity group-hover/eq:opacity-100">
+              <img src={EqUI} alt="UI_EQ" className="h-25 w-25" onClick={() => setIsOpenEq(true)} />
+              <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute bottom-0 left-0 mb-85 ml-25 rounded-2xl border-2 border-violet-950 bg-black px-2 text-sm whitespace-nowrap text-white opacity-0 transition-opacity group-hover/eq:opacity-100">
                 Ekwipunek
               </span>
             </div>
+            <div className="group/eq">
+              <img src={ShopUI} alt="UI_EQ" className="h-25 w-25" onClick={() => setIsOpenShop(true)} />
+              <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute bottom-0 left-0 mb-60 ml-25 rounded-2xl border-2 border-violet-950 bg-black px-2 text-sm whitespace-nowrap text-white opacity-0 transition-opacity group-hover/eq:opacity-100">
+                Sklep
+              </span>
+            </div>
             <div className="group/czat">
-              <img src={CzatUI} alt="UI_Czat" className="h-25 w-25" />
+              <img src={CzatUI} alt="UI_Czat" className="h-25 w-25" onClick={() => setIsOpenChat(true)} />
               <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute bottom-0 left-0 mb-35 ml-25 rounded-2xl border-2 border-violet-950 bg-black px-2 text-sm whitespace-nowrap text-white opacity-0 transition-opacity group-hover/czat:opacity-100">
                 Znajomi/Czat
               </span>
@@ -438,11 +479,43 @@ function App() {
             </div>
           </div>
         </div>
+        {isOpenShop && (
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
+            <div style={{ backgroundImage: `url(${ShopImg})`, backgroundSize: "cover", backgroundPosition: "center" }} className="pointer-events-auto relative h-155 w-210 overflow-hidden rounded-2xl">
+              <span style={{ fontFamily: "'Cinzel', serif" }} className="pointer-events-none absolute bottom-0 left-0 z-10 mb-109 ml-125.5 text-2xl/snug text-yellow-500">
+                {gold}
+              </span>
+              <div style={{ backgroundImage: `url(${dlugi_miecz})`, backgroundSize: "cover", backgroundPosition: "center", transform: "rotate(-135deg)" }} className="pointer-events-none absolute bottom-0 left-0 mb-56.5 ml-29.5 h-45 w-35"></div>
+              <div style={{ backgroundImage: `url(${miecz_dusz})`, backgroundSize: "cover", backgroundPosition: "center", transform: "rotate(45deg)" }} className="pointer-events-none absolute bottom-0 left-0 mb-53.5 ml-97.5 h-50 w-15"></div>
+              <div style={{ backgroundImage: `url(${monolit_slayer})`, backgroundSize: "cover", backgroundPosition: "center", transform: "rotate(45deg)" }} className="pointer-events-none absolute bottom-0 left-0 mb-53 ml-154 h-50 w-15"></div>
+
+              <span style={{ fontFamily: "'Cinzel', serif" }} className="pointer-events-none absolute bottom-0 left-0 z-10 mb-45 ml-141.5 text-xl/snug text-white">
+                Monolit Slayer
+              </span>
+              <span style={{ fontFamily: "'Cinzel', serif" }} className="pointer-events-none absolute bottom-0 left-0 z-10 mb-45 ml-90.5 text-xl/snug text-white">
+                Miecz Dusz
+              </span>
+              <span style={{ fontFamily: "'Cinzel', serif" }} className="pointer-events-none absolute bottom-0 left-0 z-10 mb-45 ml-31.5 text-xl/snug text-white">
+                Długi Miecz
+              </span>
+              <span style={{ fontFamily: "'Cinzel', serif" }} onClick={() => handleBuyItem(shopList[0])} className="absolute bottom-0 left-0 z-10 mb-23 ml-29.5 cursor-pointer text-xl/snug text-yellow-500">
+                Cena: 10 złota
+              </span>
+              <span style={{ fontFamily: "'Cinzel', serif" }} onClick={() => handleBuyItem(shopList[1])} className="absolute bottom-0 left-0 z-10 mb-23 ml-86 cursor-pointer text-xl/snug text-yellow-500">
+                Cena: 50 złota
+              </span>
+              <span style={{ fontFamily: "'Cinzel', serif" }} onClick={() => handleBuyItem(shopList[2])} className="absolute bottom-0 left-0 z-10 mb-23 ml-142 cursor-pointer text-xl/snug text-yellow-500">
+                Cena: 100 złota
+              </span>
+              <div className="absolute top-0 right-0 mt-20.5 mr-7.5 h-9 w-30 cursor-pointer rounded-sm" onClick={() => setIsOpenShop(false)}></div>
+            </div>
+          </div>
+        )}
         {isOpenCasino && (
           <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
             <div style={{ backgroundImage: `url(${CasinoImg})`, backgroundSize: "cover", backgroundPosition: "center" }} className="pointer-events-auto relative h-155 w-210 overflow-hidden rounded-2xl">
               <div className="flex justify-end">
-                <button style={{ backgroundImage: `url(${CasinoExit})`, backgroundSize: "cover", backgroundPosition: "center" }} className="m-2 h-10 w-10 hover:bg-blue-200/10" onClick={() => setIsOpenCasino(false)}></button>
+                <button style={{ backgroundImage: `url(${CasinoExit})`, backgroundSize: "cover", backgroundPosition: "center" }} className="m-2 h-10 w-10 cursor-pointer hover:bg-blue-200/10" onClick={() => setIsOpenCasino(false)}></button>
               </div>
               <div className="absolute bottom-0 left-0 mb-4.5 ml-75">
                 <input
