@@ -4,6 +4,8 @@ export interface IItem {
   typ: "Broń";
   ilosc: number;
   poziom: number;
+  obrazenia: number;
+  czyzalozony: boolean;
 }
 
 export interface IShop {

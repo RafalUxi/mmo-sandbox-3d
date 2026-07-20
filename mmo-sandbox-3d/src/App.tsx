@@ -40,12 +40,9 @@ import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
 import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
 import { FiUser, FiLock } from "react-icons/fi";
-import { fetchPlayerStats, buyItem } from "./fetch/player";
+import { fetchPlayerStats, buyItem, fetchPutOnItem, fetchTakeOffItem } from "./fetch/player";
 import { type IItem, type IShop } from "../../shared/types";
 import { shopList } from "../../shared/ItemsList";
-import { retroPass } from "three/examples/jsm/tsl/display/RetroPassNode.js";
-import { div } from "three/tsl";
-import { Item } from "three/examples/jsm/inspector/ui/Item.js";
 
 function App() {
   // ruch - graczy online
@@ -230,8 +227,12 @@ function App() {
     setInventory(dane.inventory);
   };
 
-  const handlePutOnItem = (item: IItem) => {
+  const handlePutOnItem = async (item: IItem) => {
     if (putOnItem) return;
+    if (!token) return;
+
+    await fetchPutOnItem(item, token);
+
     setInventory((prev) => {
       if (item.ilosc > 1) {
         return prev.map((i) => {
@@ -243,9 +244,13 @@ function App() {
     setPutOnItem([item]);
   };
 
-  const handleTakeoffItem = () => {
+  const handleTakeoffItem = async () => {
     if (!putOnItem) return;
+    if (!token) return;
     const item = putOnItem[0];
+
+    await fetchTakeOffItem(item, token);
+
     setInventory((prev) => {
       const isItem = prev.some((i) => i.id === item.id);
       if (isItem) {

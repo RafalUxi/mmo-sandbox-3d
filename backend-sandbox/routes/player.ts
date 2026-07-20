@@ -89,3 +89,87 @@ playerRouter.post("/buy-item", authenticateToken, async (req: AuthRequest, res) 
     res.status(500).json({ message: "Błąd - zakup przedmiotu" });
   }
 });
+
+playerRouter.post("/put-on-item", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const playerId = req.user.userId;
+    const { item } = req.body;
+
+    if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
+
+    const result = await pool.query("SELECT inventory FROM player_stats WHERE user_id = $1", [playerId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Nie znaleziono gracza w bazie!" });
+    }
+
+    const currentInventory = result.rows[0].inventory;
+    let newInventory: IItem[] = [];
+
+    if (typeof currentInventory === "string") {
+      newInventory = JSON.parse(currentInventory);
+    } else if (Array.isArray(currentInventory)) {
+      newInventory = currentInventory;
+    }
+
+    const isItem = newInventory.some((i) => i.id === item.id); // Sprawdzenie poprwaności przesłanych danych
+
+    if (isItem) {
+      const finnalInventory = newInventory.map((i) => {
+        if (i.id === item.id) {
+          return { ...i, czyzalozony: true };
+        } else return { ...i, czyzalozony: false };
+      });
+
+      await pool.query("UPDATE player_stats SET inventory = $1 WHERE user_id = $2 ", [JSON.stringify(finnalInventory), playerId]);
+
+      res.json({ inventory: finnalInventory });
+    } else {
+      res.status(400).json({ message: "błąd danych wejściowych " });
+    }
+  } catch (err) {
+    console.error("Błąd pobierania danych:", err);
+    res.status(500).json({ message: "Błąd - założenie przedmiotu" });
+  }
+});
+
+playerRouter.post("/take-off-item", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const playerId = req.user.userId;
+    const { item } = req.body;
+
+    if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
+
+    const result = await pool.query("SELECT inventory FROM player_stats WHERE user_id = $1", [playerId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Nie znaleziono gracza w bazie!" });
+    }
+
+    const currentInventory = result.rows[0].inventory;
+    let newInventory: IItem[] = [];
+
+    if (typeof currentInventory === "string") {
+      newInventory = JSON.parse(currentInventory);
+    } else if (Array.isArray(currentInventory)) {
+      newInventory = currentInventory;
+    }
+
+    const isItem = newInventory.some((i) => i.id === item.id); // Sprawdzenie poprwaności przesłanych danych
+
+    if (isItem) {
+      const finnalInventory = newInventory.map((i) => {
+        return { ...i, czyzalozony: false };
+      });
+      console.log(finnalInventory);
+      await pool.query("UPDATE player_stats SET inventory = $1 WHERE user_id = $2 ", [JSON.stringify(finnalInventory), playerId]);
+
+      res.json({ inventory: finnalInventory });
+    } else {
+      res.status(400).json({ message: "błąd danych wejściowych " });
+    }
+  } catch (err) {
+    console.error("Błąd pobierania danych:", err);
+    res.status(500).json({ message: "Błąd - zdjęcia przedmiotu" });
+  }
+});
