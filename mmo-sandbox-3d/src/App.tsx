@@ -45,6 +45,7 @@ import { type IItem, type IShop } from "../../shared/types";
 import { shopList } from "../../shared/ItemsList";
 import { retroPass } from "three/examples/jsm/tsl/display/RetroPassNode.js";
 import { div } from "three/tsl";
+import { Item } from "three/examples/jsm/inspector/ui/Item.js";
 
 function App() {
   // ruch - graczy online
@@ -73,6 +74,8 @@ function App() {
   const [infoSword, setInfoSword] = useState<string>("");
   const [putOnItem, setPutOnItem] = useState<IItem[] | null>(null);
   const [hoveredItem, setHoveredItem] = useState<IItem | null>(null);
+
+  const [upgradeItemHover, setUpgradeItemHover] = useState<IItem[] | null>(null);
 
   // UI - Shop
   const [isOpenShop, setIsOpenShop] = useState<boolean>(false);
@@ -259,6 +262,37 @@ function App() {
   };
 
   const handleUpgrade = async () => {};
+
+  const handlePutOnUpgrade = (item: IItem) => {
+    if (upgradeItemHover) return;
+    setInventory((prev) => {
+      if (item.ilosc > 1) {
+        return prev.map((i) => {
+          if (i.id === item.id) return { ...i, ilosc: i.ilosc - 1 };
+          return i;
+        });
+      } else return prev.filter((i) => i.id !== item.id);
+    });
+    setUpgradeItemHover([item]);
+  };
+
+  const handleTakeoffUpgrade = () => {
+    if (!upgradeItemHover) return;
+    const item = upgradeItemHover[0];
+    setInventory((prev) => {
+      const isItem = prev.some((i) => i.id === item.id);
+      if (isItem) {
+        return prev.map((i) => {
+          if (i.id === item.id) {
+            return { ...i, ilosc: i.ilosc + 1 };
+          } else return i;
+        });
+      } else {
+        return [...prev, item];
+      }
+    });
+    setUpgradeItemHover(null);
+  };
 
   if (frontPage) {
     return (
@@ -521,7 +555,7 @@ function App() {
           <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
             <div style={{ backgroundImage: `url(${EqImg})`, backgroundSize: "cover", backgroundPosition: "center" }} className="pointer-events-none relative h-200 w-7xl overflow-hidden rounded-2xl">
               <div className="pointer-events-auto absolute top-0 right-0 mt-27.5 mr-65.5 h-7 w-26 cursor-pointer rounded-sm" onClick={() => setIsOpenEq(false)}></div>
-              <div className="pointer-events-auto absolute bottom-0 left-15.5 mb-25 h-14 w-48.5 cursor-pointer rounded-sm" onClick={() => handleUpgrade()}></div>
+              <div className="pointer-events-auto absolute bottom-0 left-15.5 mb-25 h-14 w-48.5 cursor-pointer rounded-sm border-amber-400" onClick={() => handleUpgrade()}></div>
               <div className="absolute top-0 left-0 mt-62.5 ml-95 h-92 w-68">
                 <div className="grid grid-cols-3 gap-3">
                   {inventory.map((item) => {
@@ -537,16 +571,49 @@ function App() {
                           <button onClick={() => handlePutOnItem(item)} className="hover:text-violet-500">
                             Załóż przedmiot
                           </button>
-                          <button className="hover:text-violet-500">Ulepsz przedmiot</button>
+                          <button onClick={() => handlePutOnUpgrade(item)} className="hover:text-violet-500">
+                            Ulepsz przedmiot
+                          </button>
                         </span>
                       </div>
                     );
                   })}
                 </div>
               </div>
+              {upgradeItemHover !== null && (
+                <div className="pointer-events-none h-screen w-full">
+                  <div className="pointer-events-none absolute top-0 left-0 z-40 mt-109.5 ml-11 h-60 w-60 overflow-visible">
+                    {upgradeItemHover.map((item) => {
+                      const img = getItemImage(item.nazwa);
+                      if (!img) return null;
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            backgroundImage: `url(${img})`,
+                            backgroundSize: "contain",
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "center",
+                            transform: `rotate(45deg) scale(0.42)`,
+                          }}
+                          className="h-full w-full"
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="group/menu pointer-events-auto absolute top-0 left-0 z-50 mt-129 ml-31 h-20 w-20">
+                    <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute top-0 left-0 z-40 mt-20 ml-0 flex flex-col rounded-2xl border-2 border-violet-950 bg-black px-2 py-2 text-sm whitespace-nowrap text-white opacity-0 group-hover/menu:opacity-100">
+                      <button onClick={() => handleTakeoffUpgrade()} className="hover:text-violet-500">
+                        Powrót
+                      </button>
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {putOnItem !== null && (
                 <div className="pointer-events-none h-screen w-full">
-                  <div className="pointer-events-none absolute top-0 left-0 z-40 mt-35.5 ml-10 h-60 w-60 overflow-visible">
+                  <div className="pointer-events-none absolute top-0 left-0 z-50 mt-35.5 ml-10 h-60 w-60 overflow-visible">
                     {putOnItem.map((item) => {
                       const img = getItemImage(item.nazwa);
                       if (!img) return null;
@@ -565,7 +632,7 @@ function App() {
                       );
                     })}
                   </div>
-                  <div className="group/menu pointer-events-auto relative top-0 left-0 z-50 mt-46 ml-21 h-38 w-38">
+                  <div className="group/menu pointer-events-auto absolute top-0 left-0 z-50 mt-46 ml-21 h-38 w-38">
                     <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute top-0 left-0 z-40 mt-35 ml-0 flex flex-col rounded-2xl border-2 border-violet-950 bg-black px-2 py-2 text-sm whitespace-nowrap text-white opacity-0 group-hover/menu:opacity-100">
                       <button onClick={() => handleTakeoffItem()} className="hover:text-violet-500">
                         Zdejmij przedmiot
