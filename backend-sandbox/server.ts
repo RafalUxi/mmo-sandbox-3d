@@ -99,7 +99,6 @@ io.on("connection", (socket: CustomSocket) => {
         const random = crypto.randomInt(1, 1000000) / 1000000;
         const crash = (1 - house_edge) / random;
         const crashOut = Math.min(10, Math.max(1, Math.floor(crash * 100) / 100)); // zwrot 1-10
-        console.log(crashOut);
 
         intervalId = setInterval(async () => {
           multiplier += 0.01;

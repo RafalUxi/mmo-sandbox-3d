@@ -3,7 +3,7 @@ import { Physics } from "@react-three/rapier";
 import { io } from "socket.io-client";
 import { Socket } from "socket.io-client";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { Stats } from "@react-three/drei";
 import { OrbitControls } from "@react-three/drei";
 import { PlayerController } from "../componenets/playerKeys";
@@ -28,9 +28,13 @@ import CzatUI from "./graphics/UI/ikonaCzat.png";
 import EqUI from "./graphics/UI/ikonaEkwipunek.png";
 import ShopUI from "./graphics/UI/ikonaSklep.png";
 import ShopImg from "./graphics/sklep.png";
+import EqImg from "./graphics/eq.png";
 import dlugi_miecz from "./graphics/swords/długi_miecz.png";
 import miecz_dusz from "./graphics/swords/Miecz_dusz.png";
 import monolit_slayer from "./graphics/swords/monolit_slayer.png";
+import dlugi_miecz_fixed from "./graphics/swords/długi_miecz_fixed.png";
+import miecz_dusz_fixed from "./graphics/swords/miecz_dusz_fixed.png";
+import monolit_slayer_fixed from "./graphics/swords/monolit_slayer_fixed.png";
 import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiTailwindcss } from "react-icons/si";
 import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
@@ -39,6 +43,8 @@ import { FiUser, FiLock } from "react-icons/fi";
 import { fetchPlayerStats, buyItem } from "./fetch/player";
 import { type IItem, type IShop } from "../../shared/types";
 import { shopList } from "../../shared/ItemsList";
+import { retroPass } from "three/examples/jsm/tsl/display/RetroPassNode.js";
+import { div } from "three/tsl";
 
 function App() {
   // ruch - graczy online
@@ -63,6 +69,10 @@ function App() {
 
   // UI - EQ
   const [isOpenEq, setIsOpenEq] = useState<boolean>(false);
+  const [isContextMenu, setIsContextMenu] = useState<boolean>(false);
+  const [infoSword, setInfoSword] = useState<string>("");
+  const [putOnItem, setPutOnItem] = useState<IItem[] | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<IItem | null>(null);
 
   // UI - Shop
   const [isOpenShop, setIsOpenShop] = useState<boolean>(false);
@@ -203,12 +213,52 @@ function App() {
     }
   };
 
+  const getItemImage = (nazwa: string) => {
+    if (nazwa === "Długi Miecz") return dlugi_miecz_fixed;
+    if (nazwa === "Miecz Dusz") return miecz_dusz_fixed;
+    if (nazwa === "Monolit Slayer") return monolit_slayer_fixed;
+    return null;
+  };
+
   const handleBuyItem = async (item: IShop) => {
     if (!token) return;
     const dane = await buyItem(item, token);
     setGold(dane.gold);
     setInventory(dane.inventory);
   };
+
+  const handlePutOnItem = (item: IItem) => {
+    if (putOnItem) return;
+    setInventory((prev) => {
+      if (item.ilosc > 1) {
+        return prev.map((i) => {
+          if (i.id === item.id) return { ...i, ilosc: i.ilosc - 1 };
+          return i;
+        });
+      } else return prev.filter((i) => i.id !== item.id);
+    });
+    setPutOnItem([item]);
+  };
+
+  const handleTakeoffItem = () => {
+    if (!putOnItem) return;
+    const item = putOnItem[0];
+    setInventory((prev) => {
+      const isItem = prev.some((i) => i.id === item.id);
+      if (isItem) {
+        return prev.map((i) => {
+          if (i.id === item.id) {
+            return { ...i, ilosc: i.ilosc + 1 };
+          } else return i;
+        });
+      } else {
+        return [...prev, item];
+      }
+    });
+    setPutOnItem(null);
+  };
+
+  const handleUpgrade = async () => {};
 
   if (frontPage) {
     return (
@@ -467,6 +517,78 @@ function App() {
             </div>
           </div>
         </div>
+        {isOpenEq && (
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
+            <div style={{ backgroundImage: `url(${EqImg})`, backgroundSize: "cover", backgroundPosition: "center" }} className="pointer-events-none relative h-200 w-7xl overflow-hidden rounded-2xl">
+              <div className="pointer-events-auto absolute top-0 right-0 mt-27.5 mr-65.5 h-7 w-26 cursor-pointer rounded-sm" onClick={() => setIsOpenEq(false)}></div>
+              <div className="pointer-events-auto absolute bottom-0 left-15.5 mb-25 h-14 w-48.5 cursor-pointer rounded-sm" onClick={() => handleUpgrade()}></div>
+              <div className="absolute top-0 left-0 mt-62.5 ml-95 h-92 w-68">
+                <div className="grid grid-cols-3 gap-3">
+                  {inventory.map((item) => {
+                    const img = getItemImage(item.nazwa);
+                    if (!img) return null;
+                    return (
+                      <div key={item.id} className="group/menu pointer-events-auto relative" onMouseEnter={() => setHoveredItem(item)} onMouseLeave={() => setHoveredItem(null)}>
+                        <div key={item.id} className="h-22 w-7">
+                          <div style={{ backgroundImage: `url(${img})`, backgroundSize: "cover", transform: `rotate(45deg)` }} className="h-full w-full" />
+                        </div>
+                        <div className="absolute top-0 right-0 mr-5 rounded-xl bg-black px-1 text-center text-sm text-yellow-500">x{item.ilosc}</div>
+                        <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute top-0 left-0 z-40 mt-18 -ml-14 flex flex-col space-y-2 rounded-2xl border-2 border-violet-950 bg-black px-2 py-2 text-sm whitespace-nowrap text-white opacity-0 group-hover/menu:opacity-100">
+                          <button onClick={() => handlePutOnItem(item)} className="hover:text-violet-500">
+                            Załóż przedmiot
+                          </button>
+                          <button className="hover:text-violet-500">Ulepsz przedmiot</button>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {putOnItem !== null && (
+                <div className="pointer-events-none h-screen w-full">
+                  <div className="pointer-events-none absolute top-0 left-0 z-40 mt-35.5 ml-10 h-60 w-60 overflow-visible">
+                    {putOnItem.map((item) => {
+                      const img = getItemImage(item.nazwa);
+                      if (!img) return null;
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            backgroundImage: `url(${img})`,
+                            backgroundSize: "contain",
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "center",
+                            transform: `rotate(45deg) scale(0.7)`,
+                          }}
+                          className="h-full w-full"
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="group/menu pointer-events-auto relative top-0 left-0 z-50 mt-46 ml-21 h-38 w-38">
+                    <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute top-0 left-0 z-40 mt-35 ml-0 flex flex-col rounded-2xl border-2 border-violet-950 bg-black px-2 py-2 text-sm whitespace-nowrap text-white opacity-0 group-hover/menu:opacity-100">
+                      <button onClick={() => handleTakeoffItem()} className="hover:text-violet-500">
+                        Zdejmij przedmiot
+                      </button>
+                    </span>
+                  </div>
+                </div>
+              )}
+              {hoveredItem && (
+                <div style={{ fontFamily: "'Cinzel', serif" }} className="pointer-events-none absolute top-0 right-0 mt-65 mr-78 flex h-85 w-72 flex-col space-y-2 text-xl text-white">
+                  <h1 className="text-center text-2xl text-yellow-500">{hoveredItem.nazwa}</h1>
+                  <span>Ilość: {hoveredItem.ilosc}</span>
+                  <span>Poziom: {hoveredItem.poziom}</span>
+                  <span>Obrażenia: {hoveredItem.poziom}</span>
+                  <span>Opis: {hoveredItem.poziom}</span>
+                </div>
+              )}
+              <span style={{ fontFamily: "'Cinzel', serif" }} className="pointer-events-none absolute bottom-0 left-0 z-10 mb-149 ml-184 text-2xl/snug text-yellow-500">
+                {gold}
+              </span>
+            </div>
+          </div>
+        )}
         {isOpenShop && (
           <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
             <div style={{ backgroundImage: `url(${ShopImg})`, backgroundSize: "cover", backgroundPosition: "center" }} className="pointer-events-auto relative h-155 w-210 overflow-hidden rounded-2xl">
