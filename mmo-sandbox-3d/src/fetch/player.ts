@@ -38,3 +38,13 @@ export const fetchTakeOffItem = async (item: IItem, token: string) => {
   if (!res.ok) throw new Error("Błąd odkładania przedmiotu");
   return res.json();
 };
+
+export const fetchUpgradeItem = async (item: IItem, token: string) => {
+  const res = await fetch("http://localhost:5000/player/upgrade-item", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ item }),
+  });
+  if (!res.ok) throw new Error("Błąd ulepszania");
+  return res.json();
+};

@@ -40,7 +40,7 @@ import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
 import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
 import { FiUser, FiLock } from "react-icons/fi";
-import { fetchPlayerStats, buyItem, fetchPutOnItem, fetchTakeOffItem } from "./fetch/player";
+import { fetchPlayerStats, buyItem, fetchPutOnItem, fetchTakeOffItem, fetchUpgradeItem } from "./fetch/player";
 import { type IItem, type IShop } from "../../shared/types";
 import { shopList } from "../../shared/ItemsList";
 
@@ -236,10 +236,10 @@ function App() {
     setInventory((prev) => {
       if (item.ilosc > 1) {
         return prev.map((i) => {
-          if (i.id === item.id) return { ...i, ilosc: i.ilosc - 1 };
+          if (i.id === item.id && i.poziom === item.poziom) return { ...i, ilosc: i.ilosc - 1 };
           return i;
         });
-      } else return prev.filter((i) => i.id !== item.id);
+      } else return prev.filter((i) => !(i.id === item.id && i.poziom === item.poziom));
     });
     setPutOnItem([item]);
   };
@@ -252,10 +252,10 @@ function App() {
     await fetchTakeOffItem(item, token);
 
     setInventory((prev) => {
-      const isItem = prev.some((i) => i.id === item.id);
+      const isItem = prev.some((i) => i.id === item.id && i.poziom === item.poziom);
       if (isItem) {
         return prev.map((i) => {
-          if (i.id === item.id) {
+          if (i.id === item.id && i.poziom === item.poziom) {
             return { ...i, ilosc: i.ilosc + 1 };
           } else return i;
         });
@@ -266,17 +266,26 @@ function App() {
     setPutOnItem(null);
   };
 
-  const handleUpgrade = async () => {};
+  const handleUpgrade = async () => {
+    if (!token) return;
+    if (!upgradeItemHover) return;
+    const item = upgradeItemHover[0];
+
+    const data = await fetchUpgradeItem(item, token);
+    setInventory(data.inventory);
+    setGold(data.gold);
+    setUpgradeItemHover(null);
+  };
 
   const handlePutOnUpgrade = (item: IItem) => {
     if (upgradeItemHover) return;
     setInventory((prev) => {
       if (item.ilosc > 1) {
         return prev.map((i) => {
-          if (i.id === item.id) return { ...i, ilosc: i.ilosc - 1 };
+          if (i.id === item.id && i.poziom === item.poziom) return { ...i, ilosc: i.ilosc - 1 };
           return i;
         });
-      } else return prev.filter((i) => i.id !== item.id);
+      } else return prev.filter((i) => !(i.id === item.id && i.poziom === item.poziom));
     });
     setUpgradeItemHover([item]);
   };
@@ -285,10 +294,10 @@ function App() {
     if (!upgradeItemHover) return;
     const item = upgradeItemHover[0];
     setInventory((prev) => {
-      const isItem = prev.some((i) => i.id === item.id);
+      const isItem = prev.some((i) => i.id === item.id && i.poziom === item.poziom);
       if (isItem) {
         return prev.map((i) => {
-          if (i.id === item.id) {
+          if (i.id === item.id && i.poziom === item.poziom) {
             return { ...i, ilosc: i.ilosc + 1 };
           } else return i;
         });
