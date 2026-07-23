@@ -113,6 +113,7 @@ playerRouter.post("/put-on-item", authenticateToken, async (req: AuthRequest, re
     }
 
     const isItem = newInventory.some((dane) => dane.id === item.id && dane.poziom === item.poziom); // Sprawdzenie poprwaności przesłanych danych
+    console.log(item);
 
     if (isItem) {
       const finnalInventory = newInventory.map((i) => {
@@ -123,7 +124,7 @@ playerRouter.post("/put-on-item", authenticateToken, async (req: AuthRequest, re
 
       await pool.query("UPDATE player_stats SET inventory = $1 WHERE user_id = $2 ", [JSON.stringify(finnalInventory), playerId]);
 
-      res.json({ inventory: finnalInventory });
+      res.json({ message: `Założony przedmiot: ${item.nazwa}, który ma poziom: ${item.poziom}` });
     } else {
       res.status(400).json({ message: "błąd danych wejściowych " });
     }
@@ -173,6 +174,19 @@ playerRouter.post("/take-off-item", authenticateToken, async (req: AuthRequest, 
   }
 });
 
+const mergeInventory = (inventory: IItem[]): IItem[] => {
+  const map = new Map<string, IItem>();
+  for (const item of inventory) {
+    const key = `${item.id}_${item.poziom}`;
+    if (map.has(key)) {
+      map.get(key)!.ilosc += item.ilosc;
+    } else {
+      map.set(key, { ...item });
+    }
+  }
+  return [...map.values()].filter((i) => i.ilosc > 0);
+};
+
 playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const playerId = req.user.userId;
@@ -190,6 +204,7 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
     const currentGold = result.rows[0].gold;
     const currentInventory = result.rows[0].inventory;
     let newInventory: IItem[] = [];
+    let finnalInventory: IItem[] = [];
 
     if (typeof currentInventory === "string") {
       newInventory = JSON.parse(currentInventory);
@@ -197,24 +212,33 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
       newInventory = currentInventory;
     }
 
-    const isItem = newInventory.some((dane) => dane.id === item.id && dane.poziom === item.poziom); // Sprawdzenie poprwaności przesłanych danych
-    if (!isItem) return res.status(400).json({ message: "Błąd danych wejściowych (fake item)" });
-    if (!(currentGold >= 20)) return res.status(400).json({ message: "Za mało golda na koncie" });
+    const upgradeItem = newInventory.find((dane) => dane.id === item.id && dane.poziom === item.poziom);
+    if (!upgradeItem) return res.status(400).json({ message: "Błąd - nie znaleziono przedmiotu (fake item?)" });
 
     if (flip) {
-      const finnalInventory = newInventory.map((i) => {
-        if (i.id === item.id && i.poziom === item.poziom) {
-          return { ...i, poziom: i.poziom + 1 };
-        } else return { ...i };
-      });
+      if (upgradeItem.ilosc === 1) {
+        finnalInventory = newInventory.map((i) => {
+          if (i.id === upgradeItem.id && i.poziom === upgradeItem.poziom) {
+            return { ...i, poziom: i.poziom + 1 };
+          } else return { ...i };
+        });
+      } else if (upgradeItem.ilosc > 1) {
+        finnalInventory = [...newInventory, { ...upgradeItem, ilosc: 1, poziom: upgradeItem.poziom + 1 }];
+        finnalInventory = finnalInventory.map((i) => {
+          if (i.id === upgradeItem.id && i.poziom === upgradeItem.poziom) {
+            return { ...i, ilosc: i.ilosc - 1 };
+          } else return i;
+        });
+      }
 
+      finnalInventory = mergeInventory(finnalInventory);
       const newGold = currentGold - 20;
 
       await pool.query("UPDATE player_stats SET gold = $1, inventory = $2  WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory), playerId]);
 
       res.json({ message: "Ulepszenie powiodło się!", inventory: finnalInventory, gold: newGold });
     } else {
-      const finnalInventory = newInventory
+      finnalInventory = newInventory
         .map((i) => {
           if (i.id === item.id && i.poziom === item.poziom) {
             return { ...i, ilosc: i.ilosc - 1 };
@@ -222,6 +246,7 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
         })
         .filter((i) => i.ilosc > 0);
 
+      finnalInventory = mergeInventory(finnalInventory);
       const newGold = currentGold - 20;
 
       await pool.query("UPDATE player_stats SET gold = $1, inventory = $2  WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory), playerId]);

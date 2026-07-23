@@ -231,7 +231,8 @@ function App() {
     if (putOnItem) return;
     if (!token) return;
 
-    await fetchPutOnItem(item, token);
+    const data = await fetchPutOnItem(item, token);
+    console.log(data.message);
 
     setInventory((prev) => {
       if (item.ilosc > 1) {
@@ -576,7 +577,7 @@ function App() {
                     const img = getItemImage(item.nazwa);
                     if (!img) return null;
                     return (
-                      <div key={item.id} className="group/menu pointer-events-auto relative" onMouseEnter={() => setHoveredItem(item)} onMouseLeave={() => setHoveredItem(null)}>
+                      <div key={`${item.id}_${item.poziom}`} className="group/menu pointer-events-auto relative" onMouseEnter={() => setHoveredItem(item)} onMouseLeave={() => setHoveredItem(null)}>
                         <div key={item.id} className="h-22 w-7">
                           <div style={{ backgroundImage: `url(${img})`, backgroundSize: "cover", transform: `rotate(45deg)` }} className="h-full w-full" />
                         </div>
@@ -660,8 +661,8 @@ function App() {
                   <h1 className="text-center text-2xl text-yellow-500">{hoveredItem.nazwa}</h1>
                   <span>Ilość: {hoveredItem.ilosc}</span>
                   <span>Poziom: {hoveredItem.poziom}</span>
-                  <span>Obrażenia: {hoveredItem.poziom}</span>
-                  <span>Opis: {hoveredItem.poziom}</span>
+                  <span>Obrażenia: </span>
+                  <span>Opis: </span>
                 </div>
               )}
               <span style={{ fontFamily: "'Cinzel', serif" }} className="pointer-events-none absolute bottom-0 left-0 z-10 mb-149 ml-184 text-2xl/snug text-yellow-500">
