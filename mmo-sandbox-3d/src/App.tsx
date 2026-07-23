@@ -71,6 +71,7 @@ function App() {
   const [infoSword, setInfoSword] = useState<string>("");
   const [putOnItem, setPutOnItem] = useState<IItem[] | null>(null);
   const [hoveredItem, setHoveredItem] = useState<IItem | null>(null);
+  const [isWinUpgrade, setIsWinUpgrade] = useState<string | null>(null);
 
   const [upgradeItemHover, setUpgradeItemHover] = useState<IItem[] | null>(null);
 
@@ -112,12 +113,20 @@ function App() {
 
   // START GRY - Pobieramy wszystko z serwera
   useEffect(() => {
-    if (!token) return;
+    if (!token) return setfrontPage(true);
 
     const load = async () => {
       const playerData = await fetchPlayerStats(token);
       setGold(playerData.gold);
-      setInventory(playerData.inventory);
+
+      const equippedItem = playerData.inventory.find((i: IItem) => i.czyzalozony === true);
+
+      if (equippedItem) {
+        setPutOnItem([equippedItem]);
+        setInventory(playerData.inventory.map((i: IItem) => (i.czyzalozony ? { ...i, ilosc: i.ilosc - 1 } : i)).filter((i: IItem) => i.ilosc > 0));
+      } else {
+        setInventory(playerData.inventory);
+      }
     };
 
     load();
@@ -234,14 +243,17 @@ function App() {
     const data = await fetchPutOnItem(item, token);
     console.log(data.message);
 
+    setInventory(data.inventory); // Tutaj synchronizacja z serwerem
     setInventory((prev) => {
-      if (item.ilosc > 1) {
-        return prev.map((i) => {
-          if (i.id === item.id && i.poziom === item.poziom) return { ...i, ilosc: i.ilosc - 1 };
-          return i;
-        });
-      } else return prev.filter((i) => !(i.id === item.id && i.poziom === item.poziom));
+      return prev
+        .map((i) => {
+          if (i.czyzalozony === true) {
+            return { ...i, ilosc: i.ilosc - 1 };
+          } else return i;
+        })
+        .filter((i) => i.ilosc > 0);
     });
+
     setPutOnItem([item]);
   };
 
@@ -250,7 +262,8 @@ function App() {
     if (!token) return;
     const item = putOnItem[0];
 
-    await fetchTakeOffItem(item, token);
+    const data = await fetchTakeOffItem(item, token);
+    console.log(data.message);
 
     setInventory((prev) => {
       const isItem = prev.some((i) => i.id === item.id && i.poziom === item.poziom);
@@ -261,7 +274,7 @@ function App() {
           } else return i;
         });
       } else {
-        return [...prev, item];
+        return [...prev, { ...item, ilosc: 1 }];
       }
     });
     setPutOnItem(null);
@@ -273,7 +286,19 @@ function App() {
     const item = upgradeItemHover[0];
 
     const data = await fetchUpgradeItem(item, token);
+    if (data.message === "Ulepszenie_powiodło_się") {
+      console.log("Ulepszenie powiodło się");
+      setIsWinUpgrade("Ulepszenie powiodło się!");
+      setTimeout(() => setIsWinUpgrade(null), 1500);
+    } else if (data.message === "Spalilo") {
+      console.log("Spaliło");
+      setIsWinUpgrade("Spaliło!");
+      setTimeout(() => setIsWinUpgrade(null), 1500);
+    }
+
     setInventory(data.inventory);
+    setInventory(data.inventory.map((i: IItem) => (i.czyzalozony ? { ...i, ilosc: i.ilosc - 1 } : i)).filter((i: IItem) => i.ilosc > 0));
+
     setGold(data.gold);
     setUpgradeItemHover(null);
   };
@@ -572,7 +597,7 @@ function App() {
               <div className="pointer-events-auto absolute top-0 right-0 mt-27.5 mr-65.5 h-7 w-26 cursor-pointer rounded-sm" onClick={() => setIsOpenEq(false)}></div>
               <div className="pointer-events-auto absolute bottom-0 left-15.5 mb-25 h-14 w-48.5 cursor-pointer rounded-sm border-amber-400" onClick={() => handleUpgrade()}></div>
               <div className="absolute top-0 left-0 mt-62.5 ml-95 h-92 w-68">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 -space-y-1.5">
                   {inventory.map((item) => {
                     const img = getItemImage(item.nazwa);
                     if (!img) return null;
@@ -628,12 +653,14 @@ function App() {
 
               {putOnItem !== null && (
                 <div className="pointer-events-none h-screen w-full">
-                  <div className="pointer-events-none absolute top-0 left-0 z-50 mt-35.5 ml-10 h-60 w-60 overflow-visible">
+                  <div className="pointer-events-auto absolute top-0 left-0 z-50 mt-35.5 ml-10 h-60 w-60 overflow-visible">
                     {putOnItem.map((item) => {
                       const img = getItemImage(item.nazwa);
                       if (!img) return null;
                       return (
                         <div
+                          onMouseEnter={() => setHoveredItem(item)}
+                          onMouseLeave={() => setHoveredItem(null)}
                           key={item.id}
                           style={{
                             backgroundImage: `url(${img})`,
@@ -642,7 +669,7 @@ function App() {
                             backgroundPosition: "center",
                             transform: `rotate(45deg) scale(0.7)`,
                           }}
-                          className="h-full w-full"
+                          className="pointer-events-auto h-full w-full"
                         />
                       );
                     })}
@@ -654,6 +681,13 @@ function App() {
                       </button>
                     </span>
                   </div>
+                </div>
+              )}
+              {isWinUpgrade !== null && (
+                <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 rounded-xl bg-black/70 px-6 py-3 whitespace-nowrap backdrop-blur-sm">
+                  <span style={{ fontFamily: "'Cinzel', serif", textShadow: "0 0 20px #facc15" }} className="text-3xl font-black tracking-widest text-yellow-400">
+                    {isWinUpgrade}
+                  </span>
                 </div>
               )}
               {hoveredItem && (

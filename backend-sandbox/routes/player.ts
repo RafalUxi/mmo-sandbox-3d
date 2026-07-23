@@ -113,7 +113,6 @@ playerRouter.post("/put-on-item", authenticateToken, async (req: AuthRequest, re
     }
 
     const isItem = newInventory.some((dane) => dane.id === item.id && dane.poziom === item.poziom); // Sprawdzenie poprwaności przesłanych danych
-    console.log(item);
 
     if (isItem) {
       const finnalInventory = newInventory.map((i) => {
@@ -124,7 +123,7 @@ playerRouter.post("/put-on-item", authenticateToken, async (req: AuthRequest, re
 
       await pool.query("UPDATE player_stats SET inventory = $1 WHERE user_id = $2 ", [JSON.stringify(finnalInventory), playerId]);
 
-      res.json({ message: `Założony przedmiot: ${item.nazwa}, który ma poziom: ${item.poziom}` });
+      res.json({ message: `Założony przedmiot: ${item.nazwa}, który ma poziom: ${item.poziom}`, inventory: finnalInventory });
     } else {
       res.status(400).json({ message: "błąd danych wejściowych " });
     }
@@ -164,7 +163,7 @@ playerRouter.post("/take-off-item", authenticateToken, async (req: AuthRequest, 
       });
       await pool.query("UPDATE player_stats SET inventory = $1 WHERE user_id = $2 ", [JSON.stringify(finnalInventory), playerId]);
 
-      res.json({ inventory: finnalInventory });
+      res.json({ message: `Zdjęto przedmiot: ${item.nazwa}, który ma poziom: ${item.poziom}`, inventory: finnalInventory });
     } else {
       res.status(400).json({ message: "błąd danych wejściowych " });
     }
@@ -236,7 +235,7 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
 
       await pool.query("UPDATE player_stats SET gold = $1, inventory = $2  WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory), playerId]);
 
-      res.json({ message: "Ulepszenie powiodło się!", inventory: finnalInventory, gold: newGold });
+      res.json({ message: "Ulepszenie_powiodło_się", inventory: finnalInventory, gold: newGold });
     } else {
       finnalInventory = newInventory
         .map((i) => {
@@ -251,7 +250,7 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
 
       await pool.query("UPDATE player_stats SET gold = $1, inventory = $2  WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory), playerId]);
 
-      res.json({ message: "Spaliło!", inventory: finnalInventory, gold: newGold });
+      res.json({ message: "Spalilo", inventory: finnalInventory, gold: newGold });
     }
   } catch (err) {
     console.error("Błąd pobierania danych:", err);
