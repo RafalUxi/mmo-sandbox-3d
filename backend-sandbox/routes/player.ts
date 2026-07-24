@@ -3,6 +3,7 @@ import { authenticateToken, AuthRequest } from "../middleware/auth_endpoints";
 import { pool } from "../config/db";
 import { shopList } from "../../shared/ItemsList";
 import { IItem } from "../../shared/types";
+import crypto, { randomUUID } from "node:crypto";
 
 export const playerRouter = Router();
 
@@ -199,7 +200,8 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
       return res.status(404).json({ message: "Nie znaleziono gracza w bazie!" });
     }
 
-    const flip = Math.random() > 0.5;
+    const random = crypto.randomInt(1, 1000000) / 1000000;
+    const flip = random > 0.5;
     const currentGold = result.rows[0].gold;
     const currentInventory = result.rows[0].inventory;
     let newInventory: IItem[] = [];
@@ -212,6 +214,7 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
     }
 
     const upgradeItem = newInventory.find((dane) => dane.id === item.id && dane.poziom === item.poziom);
+    if (currentGold < 20) return res.status(400).json({ message: "Za mało złota" });
     if (!upgradeItem) return res.status(400).json({ message: "Błąd - nie znaleziono przedmiotu (fake item?)" });
 
     if (flip) {
