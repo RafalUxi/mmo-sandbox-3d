@@ -14,4 +14,5 @@ export interface IShop {
   typ: "Broń";
   cena: number;
   poziom: number;
+  obrazenia: number;
 }

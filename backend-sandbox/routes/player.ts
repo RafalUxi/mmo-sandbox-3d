@@ -7,6 +7,8 @@ import crypto, { randomUUID } from "node:crypto";
 
 export const playerRouter = Router();
 
+const activeUpgradeSessions = new Set<number>();
+
 playerRouter.post("/stats", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const playerId = req.user.userId;
@@ -30,15 +32,19 @@ playerRouter.post("/stats", authenticateToken, async (req: AuthRequest, res) => 
 });
 
 playerRouter.post("/buy-item", authenticateToken, async (req: AuthRequest, res) => {
+  const playerId = req.user.userId;
+  const { item } = req.body;
+
+  if (!item || !item.id) return res.status(400).json({ message: "Brak danych" });
+
+  const client = await pool.connect();
   try {
-    const playerId = req.user.userId;
-    const { item } = req.body;
+    await client.query("BEGIN");
 
-    if (!item || !item.id) return res.status(400).json({ message: "Brak danych" });
-
-    const result = await pool.query("SELECT gold, inventory FROM player_stats WHERE user_id = $1", [playerId]);
+    const result = await client.query("SELECT gold, inventory FROM player_stats WHERE user_id = $1 FOR UPDATE", [playerId]);
 
     if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ message: "Nie znaleziono gracza w bazie!" });
     }
 
@@ -53,41 +59,39 @@ playerRouter.post("/buy-item", authenticateToken, async (req: AuthRequest, res) 
     }
 
     const shopItem = shopList.find((dane) => dane.id === item.id);
-    if (!shopItem) return res.status(404).json({ message: "Wymuszone id" });
-
-    if (shopItem.cena <= currentGold) {
-      const newGold = currentGold - shopItem.cena;
-      const isInventory = newInventory.some((dane) => dane.id === item.id && dane.poziom === item.poziom); // Tutaj sprawdzam czy kupowany item to powtórka
-
-      if (isInventory) {
-        const finnalInventory_inc = newInventory.map((i) => {
-          if (i.id === item.id && i.poziom === item.poziom) {
-            return { ...i, ilosc: i.ilosc + 1 };
-          } else return i;
-        });
-
-        await pool.query("UPDATE player_stats SET gold = $1, inventory = $2 WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory_inc), playerId]);
-
-        return res.status(200).json({
-          gold: newGold,
-          inventory: finnalInventory_inc,
-        });
-      } else {
-        const finnalInventory_add = [...newInventory, { ...shopItem, ilosc: 1, poziom: 0 }];
-
-        await pool.query("UPDATE player_stats SET gold = $1, inventory = $2 WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory_add), playerId]);
-
-        return res.status(200).json({
-          gold: newGold,
-          inventory: finnalInventory_add,
-        });
-      }
-    } else {
-      res.status(400).json({ message: "Za mało złota" });
+    if (!shopItem) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Wymuszone id" });
     }
+
+    if (shopItem.cena > currentGold) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Za mało złota" });
+    }
+
+    const newGold = currentGold - shopItem.cena;
+    const isInventory = newInventory.some((dane) => dane.id === item.id && dane.poziom === item.poziom);
+
+    let finnalInventory: IItem[];
+    if (isInventory) {
+      finnalInventory = newInventory.map((i) => {
+        if (i.id === item.id && i.poziom === item.poziom) return { ...i, ilosc: i.ilosc + 1 };
+        else return i;
+      });
+    } else {
+      finnalInventory = [...newInventory, { ...shopItem, ilosc: 1, poziom: 0, czyzalozony: false }];
+    }
+
+    await client.query("UPDATE player_stats SET gold = $1, inventory = $2 WHERE user_id = $3", [newGold, JSON.stringify(finnalInventory), playerId]);
+
+    await client.query("COMMIT");
+    return res.status(200).json({ gold: newGold, inventory: finnalInventory });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.log("Błąd zakupu", err);
     res.status(500).json({ message: "Błąd - zakup przedmiotu" });
+  } finally {
+    client.release();
   }
 });
 
@@ -156,7 +160,7 @@ playerRouter.post("/take-off-item", authenticateToken, async (req: AuthRequest, 
       newInventory = currentInventory;
     }
 
-    const isItem = newInventory.some((dane) => dane.id === item.id && dane.poziom === item.poziom); // Sprawdzenie poprwaności przesłanych danych
+    const isItem = newInventory.some((dane) => dane.id === item.id && dane.poziom === item.poziom && dane.czyzalozony === true); // Sprawdzenie poprwaności przesłanych danych
 
     if (isItem) {
       const finnalInventory = newInventory.map((i) => {
@@ -179,7 +183,9 @@ const mergeInventory = (inventory: IItem[]): IItem[] => {
   for (const item of inventory) {
     const key = `${item.id}_${item.poziom}`;
     if (map.has(key)) {
-      map.get(key)!.ilosc += item.ilosc;
+      const existing = map.get(key)!;
+      existing.ilosc += item.ilosc;
+      if (item.czyzalozony) existing.czyzalozony = true;
     } else {
       map.set(key, { ...item });
     }
@@ -188,15 +194,18 @@ const mergeInventory = (inventory: IItem[]): IItem[] => {
 };
 
 playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, res) => {
+  const playerId: number = req.user.userId;
   try {
-    const playerId = req.user.userId;
     const { item } = req.body;
 
     if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
+    if (activeUpgradeSessions.has(playerId)) return res.status(429).json({ message: "Już trwa ulepszanie" });
+    activeUpgradeSessions.add(playerId);
 
     const result = await pool.query("SELECT inventory, gold FROM player_stats WHERE user_id = $1", [playerId]);
 
     if (result.rows.length === 0) {
+      activeUpgradeSessions.delete(playerId);
       return res.status(404).json({ message: "Nie znaleziono gracza w bazie!" });
     }
 
@@ -214,23 +223,32 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
     }
 
     const upgradeItem = newInventory.find((dane) => dane.id === item.id && dane.poziom === item.poziom);
-    if (currentGold < 20) return res.status(400).json({ message: "Za mało złota" });
-    if (!upgradeItem) return res.status(400).json({ message: "Błąd - nie znaleziono przedmiotu (fake item?)" });
+    if (currentGold < 20) {
+      activeUpgradeSessions.delete(playerId);
+      return res.status(400).json({ message: "Za mało złota" });
+    }
+    if (!upgradeItem) {
+      activeUpgradeSessions.delete(playerId);
+      return res.status(400).json({ message: "Błąd - nie znaleziono przedmiotu (fake item?)" });
+    }
 
     if (flip) {
       if (upgradeItem.ilosc === 1) {
         finnalInventory = newInventory.map((i) => {
           if (i.id === upgradeItem.id && i.poziom === upgradeItem.poziom) {
-            return { ...i, poziom: i.poziom + 1 };
+            return { ...i, poziom: i.poziom + 1, czyzalozony: false };
           } else return { ...i };
         });
       } else if (upgradeItem.ilosc > 1) {
-        finnalInventory = [...newInventory, { ...upgradeItem, ilosc: 1, poziom: upgradeItem.poziom + 1 }];
+        finnalInventory = [...newInventory, { ...upgradeItem, ilosc: 1, poziom: upgradeItem.poziom + 1, czyzalozony: false }];
         finnalInventory = finnalInventory.map((i) => {
           if (i.id === upgradeItem.id && i.poziom === upgradeItem.poziom) {
             return { ...i, ilosc: i.ilosc - 1 };
           } else return i;
         });
+      } else {
+        activeUpgradeSessions.delete(playerId);
+        return res.status(400).json({ message: "Błąd ilości - ekwipunek" });
       }
 
       finnalInventory = mergeInventory(finnalInventory);
@@ -238,6 +256,7 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
 
       await pool.query("UPDATE player_stats SET gold = $1, inventory = $2  WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory), playerId]);
 
+      activeUpgradeSessions.delete(playerId);
       res.json({ message: "Ulepszenie_powiodło_się", inventory: finnalInventory, gold: newGold });
     } else {
       finnalInventory = newInventory
@@ -253,9 +272,11 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
 
       await pool.query("UPDATE player_stats SET gold = $1, inventory = $2  WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory), playerId]);
 
+      activeUpgradeSessions.delete(playerId);
       res.json({ message: "Spalilo", inventory: finnalInventory, gold: newGold });
     }
   } catch (err) {
+    activeUpgradeSessions.delete(playerId);
     console.error("Błąd pobierania danych:", err);
     res.status(500).json({ message: "Błąd - zdjęcia przedmiotu" });
   }

@@ -234,6 +234,15 @@ function App() {
     const dane = await buyItem(item, token);
     setGold(dane.gold);
     setInventory(dane.inventory);
+    setInventory((prev) => {
+      return prev
+        .map((i) => {
+          if (i.czyzalozony === true) {
+            return { ...i, ilosc: i.ilosc - 1 };
+          } else return i;
+        })
+        .filter((i) => i.ilosc > 0);
+    });
   };
 
   const handlePutOnItem = async (item: IItem) => {
@@ -460,7 +469,7 @@ function App() {
                 <a href="https://github.com/RafalUxi" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
                   <FiGithub className="h-5 w-5" />
                 </a>
-                <a href="https://linkedin.com/in/TWOJ_NICK" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
+                <a href="https://linkedin.com/in/Rafał-Trzeciakowski" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
                   <FiLinkedin className="h-5 w-5" />
                 </a>
                 <a href="mailto:rafal.trzeciakowski9090@o2.pl" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
