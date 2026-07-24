@@ -263,6 +263,11 @@ function App() {
         .filter((i) => i.ilosc > 0);
     });
 
+    if (upgradeItemHover) {
+      const u = upgradeItemHover[0];
+      setInventory((prev) => prev.map((i) => (i.id === u.id && i.poziom === u.poziom ? { ...i, ilosc: i.ilosc - 1 } : i)).filter((i) => i.ilosc > 0));
+    }
+
     setPutOnItem([item]);
   };
 
