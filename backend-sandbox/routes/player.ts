@@ -96,15 +96,18 @@ playerRouter.post("/buy-item", authenticateToken, async (req: AuthRequest, res) 
 });
 
 playerRouter.post("/put-on-item", authenticateToken, async (req: AuthRequest, res) => {
+  const playerId = req.user.userId;
+  const { item } = req.body;
+  if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
+
+  const client = await pool.connect(); // rezerwuje połaczenie
   try {
-    const playerId = req.user.userId;
-    const { item } = req.body;
+    await client.query("BEGIN");
 
-    if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
-
-    const result = await pool.query("SELECT inventory FROM player_stats WHERE user_id = $1", [playerId]);
+    const result = await client.query("SELECT inventory FROM player_stats WHERE user_id = $1 FOR UPDATE", [playerId]); // Dodaje FOR UPDATE - blokuje wiersz
 
     if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ message: "Nie znaleziono gracza w bazie!" });
     }
 
@@ -126,28 +129,37 @@ playerRouter.post("/put-on-item", authenticateToken, async (req: AuthRequest, re
         } else return { ...i, czyzalozony: false };
       });
 
-      await pool.query("UPDATE player_stats SET inventory = $1 WHERE user_id = $2 ", [JSON.stringify(finnalInventory), playerId]);
+      await client.query("UPDATE player_stats SET inventory = $1 WHERE user_id = $2 ", [JSON.stringify(finnalInventory), playerId]);
 
-      res.json({ message: `Założony przedmiot: ${item.nazwa}, który ma poziom: ${item.poziom}`, inventory: finnalInventory });
+      await client.query("COMMIT");
+      return res.json({ message: `Założony przedmiot: ${item.nazwa}, który ma poziom: ${item.poziom}`, inventory: finnalInventory });
     } else {
-      res.status(400).json({ message: "błąd danych wejściowych " });
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "błąd danych wejściowych " });
     }
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Błąd pobierania danych:", err);
     res.status(500).json({ message: "Błąd - założenie przedmiotu" });
+  } finally {
+    client.release();
   }
 });
 
 playerRouter.post("/take-off-item", authenticateToken, async (req: AuthRequest, res) => {
+  const playerId = req.user.userId;
+  const { item } = req.body;
+
+  if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
+
+  const client = await pool.connect();
   try {
-    const playerId = req.user.userId;
-    const { item } = req.body;
+    await client.query("BEGIN");
 
-    if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
-
-    const result = await pool.query("SELECT inventory FROM player_stats WHERE user_id = $1", [playerId]);
+    const result = await client.query("SELECT inventory FROM player_stats WHERE user_id = $1 FOR UPDATE", [playerId]);
 
     if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ message: "Nie znaleziono gracza w bazie!" });
     }
 
@@ -166,15 +178,20 @@ playerRouter.post("/take-off-item", authenticateToken, async (req: AuthRequest, 
       const finnalInventory = newInventory.map((i) => {
         return { ...i, czyzalozony: false };
       });
-      await pool.query("UPDATE player_stats SET inventory = $1 WHERE user_id = $2 ", [JSON.stringify(finnalInventory), playerId]);
+      await client.query("UPDATE player_stats SET inventory = $1 WHERE user_id = $2 ", [JSON.stringify(finnalInventory), playerId]);
 
-      res.json({ message: `Zdjęto przedmiot: ${item.nazwa}, który ma poziom: ${item.poziom}`, inventory: finnalInventory });
+      await client.query("COMMIT");
+      return res.json({ message: `Zdjęto przedmiot: ${item.nazwa}, który ma poziom: ${item.poziom}`, inventory: finnalInventory });
     } else {
-      res.status(400).json({ message: "błąd danych wejściowych " });
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "błąd danych wejściowych " });
     }
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Błąd pobierania danych:", err);
     res.status(500).json({ message: "Błąd - zdjęcia przedmiotu" });
+  } finally {
+    client.release();
   }
 });
 
