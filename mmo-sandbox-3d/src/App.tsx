@@ -3,7 +3,7 @@ import { Physics } from "@react-three/rapier";
 import { io } from "socket.io-client";
 import { Socket } from "socket.io-client";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
-import { use, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Stats } from "@react-three/drei";
 import { OrbitControls } from "@react-three/drei";
 import { PlayerController } from "../componenets/playerKeys";
@@ -39,7 +39,7 @@ import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNode
 import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
 import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
-import { FiUser, FiLock } from "react-icons/fi";
+import { FiUser, FiLock, FiSend } from "react-icons/fi";
 import { fetchPlayerStats, buyItem, fetchPutOnItem, fetchTakeOffItem, fetchUpgradeItem } from "./fetch/player";
 import { type IItem, type IShop } from "../../shared/types";
 import { shopList } from "../../shared/ItemsList";
@@ -81,7 +81,8 @@ function App() {
   // UI - Chat
   const [isOpenChat, setIsOpenChat] = useState<boolean>(false);
   const [addFriend, setAddFriend] = useState<string>("");
-  const [friendsList, setFriendsList] = useState<string[] | null>(["siema", "elo"]);
+  const [friendsList, setFriendsList] = useState<string[] | null>([]);
+  const [addFriendsError, setAddFriendError] = useState<string | null>(null);
 
   // UI - casino
   const [isOpenCasino, setIsOpenCasino] = useState<boolean>(false);
@@ -120,6 +121,7 @@ function App() {
     const load = async () => {
       const playerData = await fetchPlayerStats(token);
       setGold(playerData.gold);
+      setFriendsList(playerData.list);
 
       const equippedItem = playerData.inventory.find((i: IItem) => i.czyzalozony === true);
 
@@ -163,6 +165,23 @@ function App() {
         setCasinoErr(true);
         setIsLosuj(true);
         console.log(dane.message);
+      }
+    });
+
+    socketRef.current.on("addFriendsResult", (dane) => {
+      if (dane.type === "error") {
+        console.log(dane.message);
+        setAddFriendError(dane.message);
+        setTimeout(() => setAddFriendError(null), 1500);
+      }
+      if (dane.success === true) {
+        console.log(dane.lista);
+        setFriendsList(dane.lista);
+      }
+      if (dane.type === "duplicate") {
+        console.log(dane.message);
+        setAddFriendError(dane.message);
+        setTimeout(() => setAddFriendError(null), 1500);
       }
     });
 
@@ -755,18 +774,49 @@ function App() {
         )}
 
         {isOpenChat && (
-          <div className="pointer-events-none absolute inset-0 z-50 flex h-screen w-1/2 items-center justify-center">
-            <div className="pointer-events-auto relative h-128 w-64 rounded-4xl border-4 border-violet-800 bg-black">
-              <div className="absolute top-0 right-0">
-                <button style={{ backgroundImage: `url(${CasinoExit})`, backgroundSize: "cover", backgroundPosition: "center" }} className="m-2 h-10 w-10 cursor-pointer hover:bg-blue-200/10" onClick={() => setIsOpenChat(false)}></button>
+          <div className="pointer-events-none absolute inset-0 z-50 h-screen w-full">
+            {addFriendsError !== null && (
+              <div className="pointer-events-none absolute top-0 left-1/2 z-50 mt-15 -translate-x-1/2 rounded-xl bg-black/70 px-6 py-3 whitespace-nowrap backdrop-blur-sm">
+                <span style={{ fontFamily: "'Cinzel', serif", textShadow: "0 0 20px #facc15" }} className="text-3xl font-black tracking-widest text-yellow-400">
+                  {addFriendsError}
+                </span>
               </div>
-              <div className="absolute bottom-0 left-1/2 mb-4 -translate-x-1/2">
-                <input onKeyDown={(e) => e.stopPropagation()} onKeyUp={(e) => e.stopPropagation()} className="rounded-md bg-gray-400 pl-2 outline-none" type="text" placeholder="dodaj znajomego" value={addFriend.slice(0, 12)} onChange={(e) => setAddFriend(e.target.value)} />
-              </div>
-              <div className="absolute top-0 left-0 mt-18 flex h-3/4 w-full flex-col items-center space-y-2 overflow-hidden">
-                {friendsList?.map((item) => {
-                  return <div className="h-8 w-9/10 rounded-3xl border-2 border-violet-500 bg-violet-950 pl-4 font-medium text-white hover:bg-violet-900">{item}</div>;
-                })}
+            )}
+            <div className="pointer-events-none absolute inset-0 z-50 flex h-screen w-1/2 items-center justify-center">
+              <div className="pointer-events-auto relative h-128 w-64 rounded-4xl border-4 border-violet-800 bg-black">
+                <h1 style={{ fontFamily: "'Cinzel', serif" }} className="mt-3.5 flex justify-center text-2xl font-bold text-white">
+                  Znajomi
+                </h1>
+                <div className="absolute top-0 right-0">
+                  <button style={{ backgroundImage: `url(${CasinoExit})`, backgroundSize: "cover", backgroundPosition: "center" }} className="m-2 h-10 w-10 cursor-pointer hover:bg-blue-200/10" onClick={() => setIsOpenChat(false)}></button>
+                </div>
+                <div className="absolute bottom-0 left-1/2 mb-4 flex -translate-x-1/2 items-center gap-1">
+                  <input
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === "Enter") socketRef.current?.emit("AddFriends", { name: addFriend });
+                    }}
+                    onKeyUp={(e) => e.stopPropagation()}
+                    className="rounded-md bg-gray-400 pl-2 text-black outline-none"
+                    type="text"
+                    placeholder="dodaj znajomego"
+                    value={addFriend.slice(0, 12)}
+                    onChange={(e) => setAddFriend(e.target.value)}
+                  />
+                  <button onClick={() => socketRef.current?.emit("AddFriends", { name: addFriend })} className="text-violet-400 hover:text-violet-200">
+                    <FiSend className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="absolute top-0 left-0 mt-18 flex h-3/4 w-full flex-col items-center space-y-2 overflow-hidden">
+                  {friendsList?.map((item) => {
+                    return (
+                      <div key={item} className="flex h-8 w-9/10 cursor-pointer gap-2 rounded-3xl border-2 border-violet-500 bg-violet-950 pl-4 font-medium text-white hover:bg-violet-900">
+                        <FiUser className="h-6 w-6" />
+                        {item}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
