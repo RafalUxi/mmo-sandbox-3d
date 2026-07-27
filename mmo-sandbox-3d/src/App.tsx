@@ -80,6 +80,8 @@ function App() {
 
   // UI - Chat
   const [isOpenChat, setIsOpenChat] = useState<boolean>(false);
+  const [addFriend, setAddFriend] = useState<string>("");
+  const [friendsList, setFriendsList] = useState<string[] | null>(["siema", "elo"]);
 
   // UI - casino
   const [isOpenCasino, setIsOpenCasino] = useState<boolean>(false);
@@ -751,6 +753,25 @@ function App() {
             </div>
           </div>
         )}
+
+        {isOpenChat && (
+          <div className="pointer-events-none absolute inset-0 z-50 flex h-screen w-1/2 items-center justify-center">
+            <div className="pointer-events-auto relative h-128 w-64 rounded-4xl border-4 border-violet-800 bg-black">
+              <div className="absolute top-0 right-0">
+                <button style={{ backgroundImage: `url(${CasinoExit})`, backgroundSize: "cover", backgroundPosition: "center" }} className="m-2 h-10 w-10 cursor-pointer hover:bg-blue-200/10" onClick={() => setIsOpenChat(false)}></button>
+              </div>
+              <div className="absolute bottom-0 left-1/2 mb-4 -translate-x-1/2">
+                <input onKeyDown={(e) => e.stopPropagation()} onKeyUp={(e) => e.stopPropagation()} className="rounded-md bg-gray-400 pl-2 outline-none" type="text" placeholder="dodaj znajomego" value={addFriend.slice(0, 12)} onChange={(e) => setAddFriend(e.target.value)} />
+              </div>
+              <div className="absolute top-0 left-0 mt-18 flex h-3/4 w-full flex-col items-center space-y-2 overflow-hidden">
+                {friendsList?.map((item) => {
+                  return <div className="h-8 w-9/10 rounded-3xl border-2 border-violet-500 bg-violet-950 pl-4 font-medium text-white hover:bg-violet-900">{item}</div>;
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {isOpenCasino && (
           <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
             <div style={{ backgroundImage: `url(${CasinoImg})`, backgroundSize: "cover", backgroundPosition: "center" }} className="pointer-events-auto relative h-155 w-210 overflow-hidden rounded-2xl">

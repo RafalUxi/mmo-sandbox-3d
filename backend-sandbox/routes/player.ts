@@ -3,11 +3,9 @@ import { authenticateToken, AuthRequest } from "../middleware/auth_endpoints";
 import { pool } from "../config/db";
 import { shopList } from "../../shared/ItemsList";
 import { IItem } from "../../shared/types";
-import crypto, { randomUUID } from "node:crypto";
+import crypto from "node:crypto";
 
 export const playerRouter = Router();
-
-const activeUpgradeSessions = new Set<number>();
 
 playerRouter.post("/stats", authenticateToken, async (req: AuthRequest, res) => {
   try {
@@ -212,17 +210,18 @@ const mergeInventory = (inventory: IItem[]): IItem[] => {
 
 playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, res) => {
   const playerId: number = req.user.userId;
+  const { item } = req.body;
+
+  if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
+
+  const client = await pool.connect();
   try {
-    const { item } = req.body;
+    await client.query("BEGIN");
 
-    if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
-    if (activeUpgradeSessions.has(playerId)) return res.status(429).json({ message: "Już trwa ulepszanie" });
-    activeUpgradeSessions.add(playerId);
-
-    const result = await pool.query("SELECT inventory, gold FROM player_stats WHERE user_id = $1", [playerId]);
+    const result = await client.query("SELECT inventory, gold FROM player_stats WHERE user_id = $1 FOR UPDATE", [playerId]);
 
     if (result.rows.length === 0) {
-      activeUpgradeSessions.delete(playerId);
+      await client.query("ROLLBACK");
       return res.status(404).json({ message: "Nie znaleziono gracza w bazie!" });
     }
 
@@ -241,11 +240,11 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
 
     const upgradeItem = newInventory.find((dane) => dane.id === item.id && dane.poziom === item.poziom);
     if (currentGold < 20) {
-      activeUpgradeSessions.delete(playerId);
+      await client.query("ROLLBACK");
       return res.status(400).json({ message: "Za mało złota" });
     }
     if (!upgradeItem) {
-      activeUpgradeSessions.delete(playerId);
+      await client.query("ROLLBACK");
       return res.status(400).json({ message: "Błąd - nie znaleziono przedmiotu (fake item?)" });
     }
 
@@ -264,17 +263,17 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
           } else return i;
         });
       } else {
-        activeUpgradeSessions.delete(playerId);
+        await client.query("ROLLBACK");
         return res.status(400).json({ message: "Błąd ilości - ekwipunek" });
       }
 
       finnalInventory = mergeInventory(finnalInventory);
       const newGold = currentGold - 20;
 
-      await pool.query("UPDATE player_stats SET gold = $1, inventory = $2  WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory), playerId]);
+      await client.query("UPDATE player_stats SET gold = $1, inventory = $2  WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory), playerId]);
 
-      activeUpgradeSessions.delete(playerId);
-      res.json({ message: "Ulepszenie_powiodło_się", inventory: finnalInventory, gold: newGold });
+      await client.query("COMMIT");
+      return res.json({ message: "Ulepszenie_powiodło_się", inventory: finnalInventory, gold: newGold });
     } else {
       finnalInventory = newInventory
         .map((i) => {
@@ -287,14 +286,16 @@ playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, r
       finnalInventory = mergeInventory(finnalInventory);
       const newGold = currentGold - 20;
 
-      await pool.query("UPDATE player_stats SET gold = $1, inventory = $2  WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory), playerId]);
+      await client.query("UPDATE player_stats SET gold = $1, inventory = $2  WHERE user_id = $3 ", [newGold, JSON.stringify(finnalInventory), playerId]);
 
-      activeUpgradeSessions.delete(playerId);
-      res.json({ message: "Spalilo", inventory: finnalInventory, gold: newGold });
+      await client.query("COMMIT");
+      return res.json({ message: "Spalilo", inventory: finnalInventory, gold: newGold });
     }
   } catch (err) {
-    activeUpgradeSessions.delete(playerId);
+    await client.query("ROLLBACK");
     console.error("Błąd pobierania danych:", err);
     res.status(500).json({ message: "Błąd - zdjęcia przedmiotu" });
+  } finally {
+    client.release();
   }
 });
