@@ -191,7 +191,7 @@ io.on("connection", (socket: CustomSocket) => {
         await client.query("ROLLBACK");
         return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych" });
       }
-      const friend_request_checker: number[] = result.rows[0].friend_requests;
+      const friend_request_checker: number[] = (result.rows[0].friend_requests ?? []).map(Number);
       const senderId = resultSender.rows[0].id;
       const targetName = resultTarget.rows[0].username;
       const senderSocketId = connectionUsers.get(senderId); // id socketu - sendera
@@ -244,10 +244,8 @@ io.on("connection", (socket: CustomSocket) => {
         await client.query("ROLLBACK");
         return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych" });
       }
-      const friend_request_checker: number[] = result.rows[0].friend_requests;
+      const friend_request_checker: number[] = (result.rows[0].friend_requests ?? []).map(Number);
       const senderId = resultSender.rows[0].id;
-      console.log(senderId);
-      console.log(friend_request_checker.includes(senderId));
 
       if (friend_request_checker.includes(senderId)) {
         await client.query("UPDATE player_stats SET friend_requests = array_remove(friend_requests, $1) WHERE user_id = $2", [senderId, socket.userId]); // Usunięcie znacznika zaproszenia

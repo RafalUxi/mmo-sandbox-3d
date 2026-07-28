@@ -819,9 +819,9 @@ function App() {
         )}
 
         {isOpenChat && (
-          <div className="pointer-events-none absolute inset-0 z-50 h-screen w-full">
+          <div className="pointer-events-none absolute inset-0 z-40 h-screen w-full">
             {addFriendsError !== null && (
-              <div className="pointer-events-none absolute top-0 left-1/2 z-50 mt-15 -translate-x-1/2 rounded-xl bg-black/70 px-6 py-3 whitespace-nowrap backdrop-blur-sm">
+              <div className="pointer-events-none absolute top-0 left-1/2 z-60 mt-15 -translate-x-1/2 rounded-xl bg-black/70 px-6 py-3 whitespace-nowrap backdrop-blur-sm">
                 <span style={{ fontFamily: "'Cinzel', serif", textShadow: "0 0 20px #facc15" }} className="text-3xl font-black tracking-widest text-yellow-400">
                   {addFriendsError}
                 </span>
