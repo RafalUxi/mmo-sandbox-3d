@@ -83,6 +83,7 @@ function App() {
   const [addFriend, setAddFriend] = useState<string>("");
   const [friendsList, setFriendsList] = useState<string[] | null>([]);
   const [addFriendsError, setAddFriendError] = useState<string | null>(null);
+  const [friendAccept, setFriendAccept] = useState<string | null>(null);
 
   // UI - casino
   const [isOpenCasino, setIsOpenCasino] = useState<boolean>(false);
@@ -96,6 +97,7 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem("authToken"));
 
   // Gameplay
+  const [news, setNews] = useState<string | null>(null);
   const [gold, setGold] = useState<number>(100);
   const [inventory, setInventory] = useState<IItem[]>([]);
 
@@ -175,18 +177,23 @@ function App() {
         setTimeout(() => setAddFriendError(null), 1500);
       }
       if (dane.success === true) {
-        console.log(dane.lista);
-        setFriendsList(dane.lista);
+        setNews(dane.message);
+        setTimeout(() => setNews(null), 1500);
       }
-      if (dane.type === "duplicate") {
+    });
+
+    socketRef.current.on("addFriendsRequest", (dane) => {
+      if (dane.success === true && dane.type === "request") {
         console.log(dane.message);
-        setAddFriendError(dane.message);
-        setTimeout(() => setAddFriendError(null), 1500);
+        setFriendAccept(dane.odKogo);
+        setTimeout(() => setFriendAccept(null), 3000);
       }
     });
 
     socketRef.current.on("casinoUpdateMultiplier", (dane) => {
       setMultiplier(dane.currentMultiplier);
+      setAddFriendError(dane.message);
+      setTimeout(() => setAddFriendError(null), 1500);
     });
 
     socketRef.current.on("disconnectPlayer", (dane) => {
@@ -594,6 +601,14 @@ function App() {
   if (!frontPage && token)
     return (
       <div className="h-screen w-full">
+        {news !== null && (
+          <div className="pointer-events-none absolute top-1/6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-black/70 px-6 py-3 whitespace-nowrap backdrop-blur-sm">
+            <span style={{ fontFamily: "'Cinzel', serif", textShadow: "0 0 20px #facc15" }} className="text-3xl font-black tracking-widest text-yellow-400">
+              {news}
+            </span>
+          </div>
+        )}
+
         <img src={GoldUI} alt="Gold" className="absolute right-0 bottom-0 z-10 h-50 w-80" />
         <span style={{ fontFamily: "'Cinzel', serif" }} className="absolute right-0 bottom-0 z-10 mr-40 mb-19.5 text-4xl text-yellow-600">
           {gold}
