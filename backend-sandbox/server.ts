@@ -118,6 +118,14 @@ io.on("connection", (socket: CustomSocket) => {
         return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych z bazy" });
       }
 
+      // Sprawdzenie czy sender wysłał wiele zaproszeń na raz
+      const existingReq = await client.query("SELECT friend_requests FROM player_stats WHERE user_id = $1", [targetData]);
+      const pending: number[] = existingReq.rows[0].friend_requests ?? [];
+      if (pending.includes(socket.userId!)) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Zaproszenie już wysłano" });
+      }
+
       // Przesłanie zapytania
       if (targetSocketId) {
         await client.query("UPDATE player_stats SET friend_requests = array_append(friend_requests, $1) WHERE user_id = $2", [socket.userId, targetData]); // Zapisanie znacznika zaproszenia
@@ -174,13 +182,15 @@ io.on("connection", (socket: CustomSocket) => {
       const targetName = resultTarget.rows[0].username;
       const senderSocketId = connectionUsers.get(senderId); // id socketu - sendera
 
-      if (friend_request_checker.includes(senderId)) {
+      if (!friend_request_checker.includes(senderId)) {
         await client.query("UPDATE player_stats SET friend_requests = array_remove(friend_requests, $1) WHERE user_id = $2", [senderId, socket.userId]); // Usunięcie znacznika zaproszenia
         const update_list_sender = await client.query("UPDATE player_stats SET friends_list = array_append(friends_list, $1) WHERE user_id = $2 RETURNING friends_list", [friendName, senderId]); // Dodanie do listy znajomych - sender
         const update_list_target = await client.query("UPDATE player_stats SET friends_list  = array_append(friends_list, $1) WHERE user_id = $2 RETURNING friends_list", [targetName, socket.userId]); // Dodanie do listy znajomych - target
 
         await client.query("COMMIT");
-        io.to(senderSocketId!).emit("addFriendsResult", { type: "addFriend", message: "Poprawnie zaakceptowano zaproszenie", list: update_list_sender.rows[0].friends_list });
+        if (senderSocketId) {
+          io.to(senderSocketId).emit("addFriendsResult", { type: "addFriend", message: "Poprawnie zaakceptowano zaproszenie", list: update_list_sender.rows[0].friends_list });
+        }
         return socket.emit("addFriendsResult", { type: "addFriend", message: "Poprawnie zaakceptowano zaproszenie", list: update_list_target.rows[0].friends_list });
       } else {
         await client.query("ROLLBACK");

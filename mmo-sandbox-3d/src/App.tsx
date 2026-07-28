@@ -620,6 +620,7 @@ function App() {
               <button
                 onClick={() => {
                   socketRef.current?.emit("AddFriendsResponseYes", { nameSender: friendAccept });
+                  setFriendAccept(null);
                 }}
                 className="rounded-2xl border-2 border-violet-950 px-4 py-1 text-3xl font-bold text-yellow-200 hover:text-amber-300"
               >
@@ -628,6 +629,7 @@ function App() {
               <button
                 onClick={() => {
                   socketRef.current?.emit("AddFriendsResponseNo", { nameSender: friendAccept });
+                  setFriendAccept(null);
                 }}
                 className="rounded-2xl border-2 border-violet-950 px-4 py-1 text-3xl font-bold text-yellow-200 hover:text-amber-300"
               >
