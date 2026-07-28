@@ -22,6 +22,7 @@ playerRouter.post("/stats", authenticateToken, async (req: AuthRequest, res) => 
     res.json({
       gold: playerData.gold,
       inventory: playerData.inventory,
+      list: playerData.friends_list,
     });
   } catch (err) {
     console.error("Błąd pobierania danych:", err);

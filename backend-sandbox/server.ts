@@ -58,7 +58,12 @@ io.use((socket: CustomSocket, next) => {
   }
 });
 
+const connectionUsers = new Map<number, string>();
+
 io.on("connection", (socket: CustomSocket) => {
+  if (socket.userId) {
+    connectionUsers.set(socket.userId, socket.id);
+  }
   console.log(`✅ Nawiązano połączenie WebSocket! ID kabla: ${socket.id} id gracza: ${socket.userId}`);
   let multiplier = 1; // zmienna mnożnika kasyna
   let intervalId: ReturnType<typeof setInterval> | null = null; // zmienna przetrzymująca id interwału kasyna
@@ -69,6 +74,169 @@ io.on("connection", (socket: CustomSocket) => {
       io.emit("playerMove", { id: socket.id, x: dane.x, y: dane.y, z: dane.z, action: dane.action, rotation: dane.rotation });
     } catch {
       console.log("Błąd socket");
+    }
+  });
+
+  socket.on("AddFriends", async (dane) => {
+    if (!dane.name) return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd danych wejściowych" });
+    const friendName = dane.name;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      if (!socket.userId) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd id socketa" });
+      }
+
+      // Pierwsze sprawdzenie czy dodano samego siebie
+      const resultName = await client.query("SELECT username FROM users WHERE id = $1 FOR UPDATE", [socket.userId]);
+      if (resultName.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych z bazy" });
+      }
+
+      if (resultName.rows[0].username === friendName) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Dodano samego siebie" });
+      }
+
+      // Odczyt id targetu
+      const resultsAdd = await client.query("SELECT id FROM users WHERE username = $1 FOR UPDATE", [friendName]);
+      if (resultsAdd.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błędna nazwa użytkownika" });
+      }
+
+      const targetData = resultsAdd.rows[0].id; // id gracza - target
+      const targetSocketId = connectionUsers.get(targetData); // id socketu - target
+
+      // Pobranie nazwy gracza - sender
+      const playerName = await client.query("SELECT username FROM users WHERE id = $1", [socket.userId]);
+      if (playerName.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych z bazy" });
+      }
+
+      // Przesłanie zapytania
+      if (targetSocketId) {
+        await client.query("UPDATE player_stats SET friend_requests = array_append(friend_requests, $1) WHERE user_id = $2", [socket.userId, targetData]); // Zapisanie znacznika zaproszenia
+
+        io.to(targetSocketId).emit("addFriendsRequest", { success: true, type: "request", message: `Wojownik ${playerName.rows[0].username} zaprasza Cie do znajomych`, odKogo: playerName.rows[0].username });
+        await client.query("COMMIT");
+        return socket.emit("addFriendsResult", { success: true, message: "Wysłano zaproszenie" });
+      } else {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Gracz jest offline" });
+      }
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("Błąd pobierania danych:", err);
+      return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd pobierania danych" });
+    } finally {
+      client.release();
+    }
+  });
+
+  socket.on("AddFriendsResponseYes", async (dane) => {
+    if (!dane.nameSender) return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd danych wejściowych" });
+    const friendName = dane.nameSender;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      if (!socket.userId) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd socketa" });
+      }
+      // Odczyt nazwy - target
+      const resultTarget = await client.query("SELECT username FROM users WHERE id = $1 FOR UPDATE", [socket.userId]);
+      if (resultTarget.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych z bazy" });
+      }
+
+      // Weryfikacja nazawy Sendera - czyli pobranie id Sender
+      const resultSender = await client.query("SELECT id FROM users WHERE username = $1 FOR UPDATE", [friendName]);
+      if (resultSender.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błędna nazwa użytkownika (wymuszenie?)" });
+      }
+
+      // Sprawdzenie znacznika na podstawie id
+      const result = await client.query("SELECT friend_requests FROM player_stats WHERE user_id = $1 FOR UPDATE", [socket.userId]);
+      if (result.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych" });
+      }
+      const friend_request_checker: number[] = result.rows[0].friend_requests;
+      const senderId = resultSender.rows[0].id;
+      const targetName = resultTarget.rows[0].username;
+      const senderSocketId = connectionUsers.get(senderId); // id socketu - sendera
+
+      if (friend_request_checker.includes(senderId)) {
+        await client.query("UPDATE player_stats SET friend_requests = array_remove(friend_requests, $1) WHERE user_id = $2", [senderId, socket.userId]); // Usunięcie znacznika zaproszenia
+        const update_list_sender = await client.query("UPDATE player_stats SET friends_list = array_append(friends_list, $1) WHERE user_id = $2 RETURNING friends_list", [friendName, senderId]); // Dodanie do listy znajomych - sender
+        const update_list_target = await client.query("UPDATE player_stats SET friends_list  = array_append(friends_list, $1) WHERE user_id = $2 RETURNING friends_list", [targetName, socket.userId]); // Dodanie do listy znajomych - target
+
+        await client.query("COMMIT");
+        io.to(senderSocketId!).emit("addFriendsResult", { type: "addFriend", message: "Poprawnie zaakceptowano zaproszenie", list: update_list_sender.rows[0].friends_list });
+        return socket.emit("addFriendsResult", { type: "addFriend", message: "Poprawnie zaakceptowano zaproszenie", list: update_list_target.rows[0].friends_list });
+      } else {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Bład znacznika - odmowa zaproszenia do znajomych" });
+      }
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("Błąd pobierania danych:", err);
+      return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd pobierania danych" });
+    } finally {
+      client.release();
+    }
+  });
+
+  socket.on("AddFriendsResponseNo", async (dane) => {
+    if (!dane.nameSender) return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd danych wejściowych" });
+    const friendName = dane.nameSender;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      if (!socket.userId) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd socketa" });
+      }
+
+      // Weryfikacja nazawy Sendera - czyli pobranie id Sender
+      const resultSender = await client.query("SELECT id FROM users WHERE username = $1 FOR UPDATE", [friendName]);
+      if (resultSender.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błędna nazwa użytkownika (wymuszenie?)" });
+      }
+
+      // Sprawdzenie znacznika na podstawie id
+      const result = await client.query("SELECT friend_requests FROM player_stats WHERE user_id = $1 FOR UPDATE", [socket.userId]);
+      if (result.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych" });
+      }
+      const friend_request_checker: number[] = result.rows[0].friend_requests;
+      const senderId = resultSender.rows[0].id;
+      if (friend_request_checker.includes(senderId)) {
+        await client.query("UPDATE player_stats SET friend_requests = array_remove(friend_requests, $1) WHERE user_id = $2", [senderId, socket.userId]); // Usunięcie znacznika zaproszenia
+
+        await client.query("COMMIT");
+        return socket.emit("addFriendsResult", { success: true, message: "Poprawnie odmówiono zaproszenia" });
+      } else {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Bład znacznika - odmowa zaproszenia do znajomych" });
+      }
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("Błąd pobierania danych:", err);
+      return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd pobierania danych" });
+    } finally {
+      client.release();
     }
   });
 
@@ -166,6 +334,9 @@ io.on("connection", (socket: CustomSocket) => {
     io.emit("disconnectPlayer", { id: socket.id });
     activeCasinoSessions.delete(socket.id);
     console.log(`❌ Rozłączono: ${socket.id}`);
+    if (socket.userId) {
+      connectionUsers.delete(socket.userId);
+    }
   });
 });
 

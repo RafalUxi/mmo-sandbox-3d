@@ -180,20 +180,24 @@ function App() {
         setNews(dane.message);
         setTimeout(() => setNews(null), 1500);
       }
+      if (dane.type === "addFriend") {
+        console.log(dane.message);
+        setFriendsList(dane.list);
+      }
     });
 
     socketRef.current.on("addFriendsRequest", (dane) => {
       if (dane.success === true && dane.type === "request") {
         console.log(dane.message);
         setFriendAccept(dane.odKogo);
-        setTimeout(() => setFriendAccept(null), 3000);
+        setTimeout(() => setFriendAccept(null), 10000);
       }
     });
 
     socketRef.current.on("casinoUpdateMultiplier", (dane) => {
       setMultiplier(dane.currentMultiplier);
-      setAddFriendError(dane.message);
-      setTimeout(() => setAddFriendError(null), 1500);
+      setIsWinCasino(dane.message);
+      setTimeout(() => setIsWinCasino(null), 1500);
     });
 
     socketRef.current.on("disconnectPlayer", (dane) => {
@@ -606,6 +610,30 @@ function App() {
             <span style={{ fontFamily: "'Cinzel', serif", textShadow: "0 0 20px #facc15" }} className="text-3xl font-black tracking-widest text-yellow-400">
               {news}
             </span>
+          </div>
+        )}
+
+        {friendAccept !== null && (
+          <div className="pointer-events-auto absolute top-1/3 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center space-y-4 rounded-md bg-black/70 px-6 py-3 whitespace-nowrap">
+            <h1 className="pointer-events-none text-3xl font-black tracking-widest text-white">Czy chcesz dodać gracza {friendAccept} do listy znajomych</h1>
+            <div className="flex-rows flex gap-10">
+              <button
+                onClick={() => {
+                  socketRef.current?.emit("AddFriendsResponseYes", { nameSender: friendAccept });
+                }}
+                className="rounded-2xl border-2 border-violet-950 px-4 py-1 text-3xl font-bold text-yellow-200 hover:text-amber-300"
+              >
+                TAK
+              </button>
+              <button
+                onClick={() => {
+                  socketRef.current?.emit("AddFriendsResponseNo", { nameSender: friendAccept });
+                }}
+                className="rounded-2xl border-2 border-violet-950 px-4 py-1 text-3xl font-bold text-yellow-200 hover:text-amber-300"
+              >
+                NIE
+              </button>
+            </div>
           </div>
         )}
 
