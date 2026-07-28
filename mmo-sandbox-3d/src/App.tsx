@@ -853,9 +853,9 @@ function App() {
                   </button>
                 </div>
                 <div className="absolute top-0 left-0 mt-18 flex h-3/4 w-full flex-col items-center space-y-2 overflow-hidden">
-                  {friendsList?.map((item) => {
+                  {friendsList?.map((item, i) => {
                     return (
-                      <div key={item} className="flex h-8 w-9/10 cursor-pointer gap-2 rounded-3xl border-2 border-violet-500 bg-violet-950 pl-4 font-medium text-white hover:bg-violet-900">
+                      <div key={i} className="flex h-8 w-9/10 cursor-pointer gap-2 rounded-3xl border-2 border-violet-500 bg-violet-950 pl-4 font-medium text-white hover:bg-violet-900">
                         <FiUser className="h-6 w-6" />
                         {item}
                       </div>

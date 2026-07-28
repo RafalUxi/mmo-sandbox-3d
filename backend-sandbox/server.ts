@@ -108,18 +108,32 @@ io.on("connection", (socket: CustomSocket) => {
         return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błędna nazwa użytkownika" });
       }
 
+      // Sprawdzenie czy gracze są już w znajomych
+      const friends_list_results = await client.query("SELECT friends_list FROM player_stats WHERE user_id = $1 FOR UPDATE", [socket.userId]);
+      if (friends_list_results.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd pobrania danych z bazy" });
+      }
+
+      const friends_list: string[] = friends_list_results.rows[0].friends_list;
+
+      if (friends_list.includes(friendName)) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Już jesteście w znajomych" });
+      }
+
       const targetData = resultsAdd.rows[0].id; // id gracza - target
       const targetSocketId = connectionUsers.get(targetData); // id socketu - target
 
       // Pobranie nazwy gracza - sender
-      const playerName = await client.query("SELECT username FROM users WHERE id = $1", [socket.userId]);
+      const playerName = await client.query("SELECT username FROM users WHERE id = $1 FOR UPDATE", [socket.userId]);
       if (playerName.rows.length === 0) {
         await client.query("ROLLBACK");
         return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych z bazy" });
       }
 
       // Sprawdzenie czy sender wysłał wiele zaproszeń na raz
-      const existingReq = await client.query("SELECT friend_requests FROM player_stats WHERE user_id = $1", [targetData]);
+      const existingReq = await client.query("SELECT friend_requests FROM player_stats WHERE user_id = $1 FOR UPDATE", [targetData]);
       const pending: number[] = existingReq.rows[0].friend_requests ?? [];
       if (pending.includes(socket.userId!)) {
         await client.query("ROLLBACK");
@@ -182,10 +196,10 @@ io.on("connection", (socket: CustomSocket) => {
       const targetName = resultTarget.rows[0].username;
       const senderSocketId = connectionUsers.get(senderId); // id socketu - sendera
 
-      if (!friend_request_checker.includes(senderId)) {
+      if (friend_request_checker.includes(senderId)) {
         await client.query("UPDATE player_stats SET friend_requests = array_remove(friend_requests, $1) WHERE user_id = $2", [senderId, socket.userId]); // Usunięcie znacznika zaproszenia
-        const update_list_sender = await client.query("UPDATE player_stats SET friends_list = array_append(friends_list, $1) WHERE user_id = $2 RETURNING friends_list", [friendName, senderId]); // Dodanie do listy znajomych - sender
-        const update_list_target = await client.query("UPDATE player_stats SET friends_list  = array_append(friends_list, $1) WHERE user_id = $2 RETURNING friends_list", [targetName, socket.userId]); // Dodanie do listy znajomych - target
+        const update_list_sender = await client.query("UPDATE player_stats SET friends_list = array_append(friends_list, $1) WHERE user_id = $2 RETURNING friends_list", [targetName, senderId]); // Dodanie do listy znajomych - sender
+        const update_list_target = await client.query("UPDATE player_stats SET friends_list  = array_append(friends_list, $1) WHERE user_id = $2 RETURNING friends_list", [friendName, socket.userId]); // Dodanie do listy znajomych - target
 
         await client.query("COMMIT");
         if (senderSocketId) {
@@ -232,6 +246,9 @@ io.on("connection", (socket: CustomSocket) => {
       }
       const friend_request_checker: number[] = result.rows[0].friend_requests;
       const senderId = resultSender.rows[0].id;
+      console.log(senderId);
+      console.log(friend_request_checker.includes(senderId));
+
       if (friend_request_checker.includes(senderId)) {
         await client.query("UPDATE player_stats SET friend_requests = array_remove(friend_requests, $1) WHERE user_id = $2", [senderId, socket.userId]); // Usunięcie znacznika zaproszenia
 
