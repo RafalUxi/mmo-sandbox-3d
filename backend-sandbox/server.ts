@@ -265,6 +265,53 @@ io.on("connection", (socket: CustomSocket) => {
     }
   });
 
+  socket.on("StartChat", async (dane) => {
+    if (!dane.name) return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd danych wejściowych" });
+    const friendName = dane.name;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      if (!socket.userId) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd socketa" });
+      }
+
+      // Weryfikacja nazwy użytkownika - potrzebne do stworzenia pokoju
+      const resultName = await client.query("SELECT id FROM users WHERE username = $1", [friendName]);
+      if (resultName.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błędna nazwa użytkownika (wymuszenie?)" });
+      }
+
+      const targetId = resultName.rows[0].id;
+      const room = `chat_${Math.max(socket.userId, targetId)}_${Math.min(socket.userId, targetId)}`;
+      socket.join(room);
+
+      // Pobranie message
+      const result = await client.query(
+        `SELECT m.id, m.message, u.username AS sender_name, m.time_mess
+         FROM message m
+         JOIN users u ON u.id = m.sender_id
+         WHERE m.room = $1
+         ORDER BY m.time_mess ASC
+         LIMIT 50`,
+        [room],
+      );
+
+      console.log(result.rows);
+
+      await client.query("COMMIT");
+      return socket.emit("roomMessages", { success: true, messages: result.rows, room: room });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("Błąd pobierania danych:", err);
+      return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd pobierania danych" });
+    } finally {
+      client.release();
+    }
+  });
+
   const activeCasinoSessions = new Set<string>();
   socket.on("casinoStart", async (dane) => {
     if (activeCasinoSessions.has(socket.id)) return;
