@@ -274,7 +274,7 @@ io.on("connection", (socket: CustomSocket) => {
 
       if (!socket.userId) {
         await client.query("ROLLBACK");
-        return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd socketa" });
+        return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd socketa" });
       }
 
       // Weryfikacja nazwy użytkownika - potrzebne do stworzenia pokoju
@@ -299,10 +299,43 @@ io.on("connection", (socket: CustomSocket) => {
         [room],
       );
 
-      console.log(result.rows);
-
       await client.query("COMMIT");
       return socket.emit("roomMessages", { success: true, messages: result.rows, room: room });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("Błąd pobierania danych:", err);
+      return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd pobierania danych" });
+    } finally {
+      client.release();
+    }
+  });
+
+  socket.on("SendMessage", async (dane) => {
+    if (!dane.message || !dane.room) return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd danych wejściowych" });
+    const message = dane.message;
+    const room = dane.room;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      if (!socket.userId) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "erroChat", message: "Błąd socketa" });
+      }
+      await client.query("INSERT INTO message (message, room, sender_id) VALUES ($1, $2, $3)", [message, room, socket.userId]);
+
+      const usernameResults = await client.query("SELECT username FROM users WHERE id = $1 ", [socket.userId]);
+      if (usernameResults.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd odczytu danych z bazy" });
+      }
+
+      await client.query("COMMIT");
+      return io.to(room).emit("newMessage", {
+        message: message,
+        sender_name: usernameResults.rows[0].username,
+        time_mess: new Date(),
+      });
     } catch (err) {
       await client.query("ROLLBACK");
       console.error("Błąd pobierania danych:", err);

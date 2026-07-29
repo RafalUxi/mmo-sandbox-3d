@@ -14,7 +14,12 @@ playerRouter.post("/stats", authenticateToken, async (req: AuthRequest, res) => 
     const result = await pool.query("SELECT * FROM player_stats WHERE user_id = $1", [playerId]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Nie znaleziono gracza w bazie!" });
+      return res.status(404).json({ message: "Nie znaleziono gracza w bazie" });
+    }
+
+    const resultsUserName = await pool.query("SELECT username FROM users WHERE id = $1", [playerId]);
+    if (resultsUserName.rows.length === 0) {
+      return res.status(404).json({ message: "Nie znaleziono gracza w bazie" });
     }
 
     const playerData = result.rows[0];
@@ -23,6 +28,7 @@ playerRouter.post("/stats", authenticateToken, async (req: AuthRequest, res) => 
       gold: playerData.gold,
       inventory: playerData.inventory,
       list: playerData.friends_list,
+      username: resultsUserName.rows[0].username,
     });
   } catch (err) {
     console.error("Błąd pobierania danych:", err);
