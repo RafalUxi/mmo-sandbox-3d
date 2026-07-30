@@ -90,6 +90,7 @@ function App() {
   const [roomMessages, setRoomMessages] = useState<IMessage[] | null>(null);
   const [message, setMessage] = useState<string>("");
   const [currentRoom, setCurrentRoom] = useState<string | null>(null);
+  const currentRoomRef = useRef<string | null>(null);
 
   // UI - casino
   const [isOpenCasino, setIsOpenCasino] = useState<boolean>(false);
@@ -213,10 +214,12 @@ function App() {
       if (dane.success === true) {
         setRoomMessages(dane.messages);
         setCurrentRoom(dane.room);
+        currentRoomRef.current = dane.room;
       }
     });
 
     socketRef.current.on("newMessage", (dane) => {
+      if (dane.room !== currentRoomRef.current) return;
       setRoomMessages((prev) => {
         const msg: IMessage = {
           message: dane.message,
@@ -915,12 +918,17 @@ function App() {
                   className="pointer-events-none relative w-240 max-w-[90vw] overflow-hidden rounded-xl"
                 >
                   <div
-                    onClick={() => setRoomMessages(null)}
+                    onClick={() => {
+                      setRoomMessages(null);
+                      currentRoomRef.current = null;
+                      setRoomMessages(null);
+                    }}
                     role="button"
                     onKeyDown={(e) => {
                       if (e.key === "Escape") {
                         setRoomMessages(null);
                         setCurrentRoom(null);
+                        currentRoomRef.current = null;
                       }
                     }}
                     className="pointer-events-auto absolute cursor-pointer rounded-xl"

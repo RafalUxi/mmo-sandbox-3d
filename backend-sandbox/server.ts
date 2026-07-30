@@ -68,6 +68,8 @@ io.on("connection", (socket: CustomSocket) => {
   let multiplier = 1; // zmienna mnożnika kasyna
   let intervalId: ReturnType<typeof setInterval> | null = null; // zmienna przetrzymująca id interwału kasyna
   let goldInput: number = 0; // gold do pomnożenia
+  let lastSendMessage = 0;
+  let lastAddFriends = 0;
 
   socket.on("sendMessage", (dane) => {
     try {
@@ -79,6 +81,12 @@ io.on("connection", (socket: CustomSocket) => {
 
   socket.on("AddFriends", async (dane) => {
     if (!dane.name) return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd danych wejściowych" });
+    if (typeof dane.name !== "string") return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd typów danych wejściowych" });
+
+    const now = Date.now();
+    if (now - lastAddFriends < 1000) return socket.emit("addFriendsResult", { success: false, type: "error", message: "Spam" });
+    lastAddFriends = now;
+
     const friendName = dane.name;
     const client = await pool.connect();
     try {
@@ -162,6 +170,7 @@ io.on("connection", (socket: CustomSocket) => {
 
   socket.on("AddFriendsResponseYes", async (dane) => {
     if (!dane.nameSender) return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd danych wejściowych" });
+    if (typeof dane.nameSender !== "string") return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd typów danych wejściowych" });
     const friendName = dane.nameSender;
     const client = await pool.connect();
     try {
@@ -198,8 +207,13 @@ io.on("connection", (socket: CustomSocket) => {
 
       if (friend_request_checker.includes(senderId)) {
         await client.query("UPDATE player_stats SET friend_requests = array_remove(friend_requests, $1) WHERE user_id = $2", [senderId, socket.userId]); // Usunięcie znacznika zaproszenia
-        const update_list_sender = await client.query("UPDATE player_stats SET friends_list = array_append(friends_list, $1) WHERE user_id = $2 RETURNING friends_list", [targetName, senderId]); // Dodanie do listy znajomych - sender
-        const update_list_target = await client.query("UPDATE player_stats SET friends_list  = array_append(friends_list, $1) WHERE user_id = $2 RETURNING friends_list", [friendName, socket.userId]); // Dodanie do listy znajomych - target
+        await client.query("UPDATE player_stats SET friend_requests = array_remove(friend_requests, $1) WHERE user_id = $2", [socket.userId, senderId]); // Usunięcie znacznika zaproszenia
+        const update_list_sender = await client.query("UPDATE player_stats SET friends_list = array_append(friends_list, $1) WHERE user_id = $2 AND NOT ($1 = ANY(friends_list)) RETURNING friends_list", [targetName, senderId]); // Dodanie do listy znajomych - sender
+        const update_list_target = await client.query("UPDATE player_stats SET friends_list  = array_append(friends_list, $1) WHERE user_id = $2 AND NOT ($1 = ANY(friends_list)) RETURNING friends_list", [friendName, socket.userId]); // Dodanie do listy znajomych - target
+        if (update_list_sender.rows.length === 0 || update_list_target.rows.length === 0) {
+          await client.query("ROLLBACK");
+          return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych" });
+        }
 
         await client.query("COMMIT");
         if (senderSocketId) {
@@ -221,6 +235,8 @@ io.on("connection", (socket: CustomSocket) => {
 
   socket.on("AddFriendsResponseNo", async (dane) => {
     if (!dane.nameSender) return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd danych wejściowych" });
+    if (typeof dane.nameSender !== "string") return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd typów danych wejściowych" });
+
     const friendName = dane.nameSender;
     const client = await pool.connect();
     try {
@@ -267,6 +283,8 @@ io.on("connection", (socket: CustomSocket) => {
 
   socket.on("StartChat", async (dane) => {
     if (!dane.name) return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd danych wejściowych" });
+    if (typeof dane.name !== "string") return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd typów danych wejściowych" });
+
     const friendName = dane.name;
     const client = await pool.connect();
     try {
@@ -298,6 +316,9 @@ io.on("connection", (socket: CustomSocket) => {
 
       const targetId = resultName.rows[0].id;
       const room = `chat_${Math.max(socket.userId, targetId)}_${Math.min(socket.userId, targetId)}`;
+      socket.rooms.forEach((r) => {
+        if (r.startsWith("chat_")) socket.leave(r);
+      });
       socket.join(room);
 
       // Pobranie message
@@ -324,8 +345,12 @@ io.on("connection", (socket: CustomSocket) => {
 
   socket.on("SendMessage", async (dane) => {
     if (!dane.message || !dane.room || !dane.targetName) return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd danych wejściowych" });
+    if (typeof dane.message !== "string" || typeof dane.room !== "string" || typeof dane.targetName !== "string") return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd typów danych wejściowych" }); // Wlidacji typów wejścia
     const message = dane.message;
-    if (message.length > 500) return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Zbyt długa wiadomość" });
+    if (message.length > 300) return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Zbyt długa wiadomość" });
+    const now = Date.now();
+    if (now - lastSendMessage < 1000) return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Spam" });
+    lastSendMessage = now;
 
     const targetName = dane.targetName;
     const room = dane.room;
@@ -376,6 +401,7 @@ io.on("connection", (socket: CustomSocket) => {
         message: message,
         sender_name: usernameResults.rows[0].username,
         time_mess: new Date(),
+        room: room,
       });
     } catch (err) {
       await client.query("ROLLBACK");
