@@ -16,3 +16,9 @@ export interface IShop {
   poziom: number;
   obrazenia: number;
 }
+
+export interface IMessage {
+  message: string;
+  sender_name: string;
+  time_mess: string;
+}

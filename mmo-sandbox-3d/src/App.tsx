@@ -29,11 +29,13 @@ import EqUI from "./graphics/UI/ikonaEkwipunek.png";
 import ShopUI from "./graphics/UI/ikonaSklep.png";
 import ShopImg from "./graphics/sklep.png";
 import EqImg from "./graphics/eq.png";
+import chat from "./graphics/chat.png";
 import dlugi_miecz from "./graphics/swords/długi_miecz.png";
 import miecz_dusz from "./graphics/swords/Miecz_dusz.png";
 import monolit_slayer from "./graphics/swords/monolit_slayer.png";
 import dlugi_miecz_fixed from "./graphics/swords/długi_miecz_fixed.png";
 import miecz_dusz_fixed from "./graphics/swords/miecz_dusz_fixed.png";
+
 import monolit_slayer_fixed from "./graphics/swords/monolit_slayer_fixed.png";
 import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiTailwindcss } from "react-icons/si";
 import { TbBox } from "react-icons/tb";
@@ -41,7 +43,7 @@ import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
 import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
 import { FiUser, FiLock, FiSend } from "react-icons/fi";
 import { fetchPlayerStats, buyItem, fetchPutOnItem, fetchTakeOffItem, fetchUpgradeItem } from "./fetch/player";
-import { type IItem, type IShop } from "../../shared/types";
+import { type IItem, type IShop, type IMessage } from "../../shared/types";
 import { shopList } from "../../shared/ItemsList";
 
 function App() {
@@ -78,12 +80,16 @@ function App() {
   // UI - Shop
   const [isOpenShop, setIsOpenShop] = useState<boolean>(false);
 
-  // UI - Chat
+  // UI - Chat - friends
   const [isOpenChat, setIsOpenChat] = useState<boolean>(false);
   const [addFriend, setAddFriend] = useState<string>("");
   const [friendsList, setFriendsList] = useState<string[] | null>([]);
   const [addFriendsError, setAddFriendError] = useState<string | null>(null);
   const [friendAccept, setFriendAccept] = useState<string | null>(null);
+  // UI - Chat open
+  const [roomMessages, setRoomMessages] = useState<IMessage[] | null>(null);
+  const [message, setMessage] = useState<string>("");
+  const [currentRoom, setCurrentRoom] = useState<string | null>(null);
 
   // UI - casino
   const [isOpenCasino, setIsOpenCasino] = useState<boolean>(false);
@@ -100,6 +106,10 @@ function App() {
   const [news, setNews] = useState<string | null>(null);
   const [gold, setGold] = useState<number>(100);
   const [inventory, setInventory] = useState<IItem[]>([]);
+
+  // Ogólne
+  const [playerUserName, setPlayerUserName] = useState<string | null>(null);
+  const [messageTargetName, setMessageTargetName] = useState<string | null>(null);
 
   const stack = [
     { name: "React Three Fiber", Icon: SiReact, color: "#61DAFB" },
@@ -124,6 +134,7 @@ function App() {
       const playerData = await fetchPlayerStats(token);
       setGold(playerData.gold);
       setFriendsList(playerData.list);
+      setPlayerUserName(playerData.username);
 
       const equippedItem = playerData.inventory.find((i: IItem) => i.czyzalozony === true);
 
@@ -180,6 +191,10 @@ function App() {
         setNews(dane.message);
         setTimeout(() => setNews(null), 1500);
       }
+      if (dane.type === "errorChat") {
+        setNews(dane.message);
+        setTimeout(() => setNews(null), 1500);
+      }
       if (dane.type === "addFriend") {
         console.log(dane.message);
         setFriendsList(dane.list);
@@ -192,6 +207,25 @@ function App() {
         setFriendAccept(dane.odKogo);
         setTimeout(() => setFriendAccept(null), 10000);
       }
+    });
+
+    socketRef.current.on("roomMessages", (dane) => {
+      if (dane.success === true) {
+        setRoomMessages(dane.messages);
+        setCurrentRoom(dane.room);
+      }
+    });
+
+    socketRef.current.on("newMessage", (dane) => {
+      setRoomMessages((prev) => {
+        const msg: IMessage = {
+          message: dane.message,
+          sender_name: dane.sender_name,
+          time_mess: dane.time_mess,
+        };
+        if (prev === null) return [msg];
+        return [...prev, msg];
+      });
     });
 
     socketRef.current.on("casinoUpdateMultiplier", (dane) => {
@@ -378,6 +412,11 @@ function App() {
       }
     });
     setUpgradeItemHover(null);
+  };
+
+  const handleOpenChat = (friend: string) => {
+    setMessageTargetName(friend);
+    socketRef.current?.emit("StartChat", { name: friend });
   };
 
   if (frontPage) {
@@ -852,10 +891,10 @@ function App() {
                     <FiSend className="h-5 w-5" />
                   </button>
                 </div>
-                <div className="absolute top-0 left-0 mt-18 flex h-3/4 w-full flex-col items-center space-y-2 overflow-hidden">
+                <div className="absolute top-0 left-0 mt-18 flex h-3/4 w-full flex-col items-center space-y-2 overflow-y-auto">
                   {friendsList?.map((item, i) => {
                     return (
-                      <div key={i} className="flex h-8 w-9/10 cursor-pointer gap-2 rounded-3xl border-2 border-violet-500 bg-violet-950 pl-4 font-medium text-white hover:bg-violet-900">
+                      <div key={i} onClick={() => handleOpenChat(item)} className="flex h-8 w-9/10 cursor-pointer gap-2 rounded-3xl border-2 border-violet-500 bg-violet-950 pl-4 font-medium text-white hover:bg-violet-900">
                         <FiUser className="h-6 w-6" />
                         {item}
                       </div>
@@ -864,6 +903,86 @@ function App() {
                 </div>
               </div>
             </div>
+            {roomMessages !== null && (
+              <div className="pointer-events-none relative z-40 flex h-full w-screen items-center justify-end">
+                <div
+                  style={{
+                    backgroundImage: `url(${chat})`,
+                    backgroundSize: "100% 100%",
+                    backgroundPosition: "center",
+                    aspectRatio: "160/100",
+                  }}
+                  className="pointer-events-none relative w-240 max-w-[90vw] overflow-hidden rounded-xl"
+                >
+                  <div
+                    onClick={() => setRoomMessages(null)}
+                    role="button"
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setRoomMessages(null);
+                        setCurrentRoom(null);
+                      }
+                    }}
+                    className="pointer-events-auto absolute cursor-pointer rounded-xl"
+                    style={{
+                      top: "13.2%",
+                      right: "28.3%",
+                      width: "3.5%",
+                      aspectRatio: "1",
+                    }}
+                  />
+                  <div
+                    onClick={() => {
+                      socketRef.current?.emit("SendMessage", { message: message, room: currentRoom, targetName: messageTargetName });
+                      setMessage("");
+                    }}
+                    role="button"
+                    className="pointer-events-auto absolute cursor-pointer rounded-xl"
+                    style={{
+                      top: "77%",
+                      right: "30.3%",
+                      width: "3.5%",
+                      aspectRatio: "1",
+                    }}
+                  />
+                  <input
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === "Enter") {
+                        socketRef.current?.emit("SendMessage", { message: message, room: currentRoom, targetName: messageTargetName });
+                        setMessage("");
+                      }
+                    }}
+                    onKeyUp={(e) => e.stopPropagation()}
+                    style={{
+                      top: "77%",
+                      right: "34.3%",
+                      width: "35%",
+                      height: "5%",
+                    }}
+                    className="pointer-events-auto absolute rounded-md bg-transparent pl-2 text-white outline-none"
+                    type="text"
+                    placeholder="Napisz wiadomość"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                  />
+
+                  <div className="pointer-events-auto absolute flex flex-col-reverse space-y-1 overflow-y-auto px-4" style={{ top: "26%", right: "30%", width: "41%", height: "48%" }}>
+                    {[...roomMessages].reverse().map((item, i) => (
+                      <div key={i} className={`flex flex-col ${item.sender_name === playerUserName ? "items-end" : "items-start"}`}>
+                        <div className="rounded-2xl border-2 border-b-violet-600 bg-black px-4">
+                          <div className={`flex ${item.sender_name === playerUserName ? "justify-end" : "justify-start"} gap-2`}>
+                            <span className="text-xs font-bold text-violet-300">{item.sender_name}</span>
+                            <span className="text-xs text-gray-400">{new Date(item.time_mess).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}</span>
+                          </div>
+                          <span className={`flex ${item.sender_name === playerUserName ? "justify-end" : "justify-start"} text-md text-white`}>{item.message}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
