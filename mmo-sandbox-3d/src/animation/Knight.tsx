@@ -57,7 +57,6 @@ export function Knight({ action = "idle", ...props }) {
         current.clampWhenFinished = true;
       }
     }
-    // Celowo nie dajemy tu return () => fadeOut, bo Strict Mode psuje tym animacje!
   }, [action, actions]);
 
   return (
