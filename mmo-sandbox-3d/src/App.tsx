@@ -154,6 +154,7 @@ function App() {
     if (!token) return;
 
     socketRef.current = io("http://localhost:5000", { auth: { token: token } });
+    (window as any).s = socketRef.current;
 
     socketRef.current.on("playerMove", (dane) => {
       if (dane.id !== socketRef.current?.id) {
@@ -915,7 +916,7 @@ function App() {
                     backgroundPosition: "center",
                     aspectRatio: "160/100",
                   }}
-                  className="pointer-events-none relative w-240 max-w-[90vw] overflow-hidden rounded-xl"
+                  className="pointer-events-none relative -mr-30 w-240 max-w-[90vw] overflow-hidden rounded-xl"
                 >
                   <div
                     onClick={() => {

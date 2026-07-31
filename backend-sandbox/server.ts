@@ -123,7 +123,7 @@ io.on("connection", (socket: CustomSocket) => {
         return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd pobrania danych z bazy" });
       }
 
-      const friends_list: string[] = friends_list_results.rows[0].friends_list;
+      const friends_list: string[] = friends_list_results.rows[0].friends_list ?? [];
 
       if (friends_list.includes(friendName)) {
         await client.query("ROLLBACK");
@@ -208,8 +208,8 @@ io.on("connection", (socket: CustomSocket) => {
       if (friend_request_checker.includes(senderId)) {
         await client.query("UPDATE player_stats SET friend_requests = array_remove(friend_requests, $1) WHERE user_id = $2", [senderId, socket.userId]); // Usunięcie znacznika zaproszenia
         await client.query("UPDATE player_stats SET friend_requests = array_remove(friend_requests, $1) WHERE user_id = $2", [socket.userId, senderId]); // Usunięcie znacznika zaproszenia
-        const update_list_sender = await client.query("UPDATE player_stats SET friends_list = array_append(friends_list, $1) WHERE user_id = $2 AND NOT ($1 = ANY(friends_list)) RETURNING friends_list", [targetName, senderId]); // Dodanie do listy znajomych - sender
-        const update_list_target = await client.query("UPDATE player_stats SET friends_list  = array_append(friends_list, $1) WHERE user_id = $2 AND NOT ($1 = ANY(friends_list)) RETURNING friends_list", [friendName, socket.userId]); // Dodanie do listy znajomych - target
+        const update_list_sender = await client.query("UPDATE player_stats SET friends_list = array_append(friends_list, $1) WHERE user_id = $2 AND NOT ($1 = ANY(COALESCE(friends_list, '{}'::text[]))) RETURNING friends_list", [targetName, senderId]);
+        const update_list_target = await client.query("UPDATE player_stats SET friends_list = array_append(friends_list, $1) WHERE user_id = $2 AND NOT ($1 = ANY(COALESCE(friends_list, '{}'::text[]))) RETURNING friends_list", [friendName, socket.userId]);
         if (update_list_sender.rows.length === 0 || update_list_target.rows.length === 0) {
           await client.query("ROLLBACK");
           return socket.emit("addFriendsResult", { success: false, type: "error", message: "Błąd odczytu danych" });
