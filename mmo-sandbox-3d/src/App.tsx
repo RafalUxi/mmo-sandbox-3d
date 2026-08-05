@@ -422,6 +422,8 @@ function App() {
     socketRef.current?.emit("StartChat", { name: friend });
   };
 
+  const eqWeapon = putOnItem ? putOnItem[0].nazwa : null;
+
   if (frontPage) {
     return (
       <div className="relative">
@@ -1066,7 +1068,7 @@ function App() {
 
           {/* Modele mapy + kontroler postaci */}
           <Physics timeStep="vary">
-            <PlayerController posicionChange={(newPos) => socketRef.current?.emit("sendMessage", { type: "move", ...newPos })} />
+            <PlayerController weapon={eqWeapon} posicionChange={(newPos) => socketRef.current?.emit("sendMessage", { type: "move", ...newPos })} />
             <Stats />
             <MapCollider />
             <GrassPos />

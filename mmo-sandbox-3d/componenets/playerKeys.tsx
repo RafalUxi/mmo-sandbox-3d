@@ -7,9 +7,10 @@ import { RapierRigidBody, RigidBody, CapsuleCollider, useRapier } from "@react-t
 
 interface ioProps {
   posicionChange: (newPosicion: { x: number; y: number; z: number; action: string; rotation: number }) => void;
+  weapon: string | null;
 }
 
-export function PlayerController({ posicionChange }: ioProps) {
+export function PlayerController({ posicionChange, weapon }: ioProps) {
   const playerRef = useRef<THREE.Group>(null);
   const rbRef = useRef<RapierRigidBody>(null);
   const keys = useRef({ w: false, a: false, s: false, d: false, space: false });
@@ -202,7 +203,7 @@ export function PlayerController({ posicionChange }: ioProps) {
     <RigidBody type="dynamic" colliders={false} enabledRotations={[false, false, false]} ref={rbRef} position={[5, 2, 5]}>
       <CapsuleCollider args={[0.25, 0.15]} position={[0, 0.5, 0]} />
       <group ref={playerRef} scale={0.45}>
-        <Knight action={currentAction} />
+        <Knight action={currentAction} weapon={weapon} />
       </group>
     </RigidBody>
   );

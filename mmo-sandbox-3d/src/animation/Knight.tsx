@@ -10,6 +10,12 @@ interface GLTFAction extends THREE.AnimationClip {
   name: ActionName;
 }
 
+interface KnightProps {
+  action?: ActionName;
+  weapon?: string | null;
+  [key: string]: any;
+}
+
 type GLTFResult = GLTF & {
   nodes: {
     Arm_Armor: THREE.SkinnedMesh;
@@ -27,11 +33,17 @@ type GLTFResult = GLTF & {
   animations: GLTFAction[];
 };
 
-export function Knight({ action = "idle", ...props }) {
+export function Knight({ action = "idle", weapon = null, ...props }: KnightProps) {
+  const { scene: dlugi_miecz } = useGLTF("/długi_miecz.glb");
+  const { scene: miecz_dusz } = useGLTF("/miecz_dusz.glb");
+  const { scene: monolit_slayer } = useGLTF("/miecz.glb");
+
+  const swordScane = weapon === "Długi Miecz" ? dlugi_miecz : weapon === "Miecz Dusz" ? miecz_dusz : weapon === "Monolit Slayer" ? monolit_slayer : null;
+
   const group = React.useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF("/knight.glb");
-  const { scene: swordScene } = useGLTF("/miecz.glb");
-  const swordClone = React.useMemo(() => swordScene.clone(true), [swordScene]);
+
+  const swordClone = React.useMemo(() => (swordScane ? swordScane.clone(true) : null), [swordScane]);
   const clone = React.useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { nodes, materials } = useGraph(clone) as unknown as GLTFResult;
   const { actions } = useAnimations(animations, group);
@@ -65,12 +77,13 @@ export function Knight({ action = "idle", ...props }) {
         <group name="tpose" position={[0.085, -0.178, -0.084]} rotation={[0.27, -0.931, 0.209]}>
           <primitive object={nodes.spine} />
 
-          {createPortal(
-            <group position={[0, 0.07, 0.16]} rotation={[Math.PI / 2, Math.PI, 0]} scale={0.35}>
-              <primitive object={swordClone} />
-            </group>,
-            nodes.handR,
-          )}
+          {swordClone &&
+            createPortal(
+              <group position={[0, 0.07, 0.16]} rotation={[Math.PI / 2, Math.PI, 0]} scale={0.35}>
+                <primitive object={swordClone} />
+              </group>,
+              nodes.handR,
+            )}
 
           <skinnedMesh name="Arm_Armor" geometry={nodes.Arm_Armor.geometry} material={materials["Material.001"]} skeleton={nodes.Arm_Armor.skeleton} />
           <skinnedMesh name="Belt" geometry={nodes.Belt.geometry} material={materials["Material.001"]} skeleton={nodes.Belt.skeleton} />
@@ -85,3 +98,6 @@ export function Knight({ action = "idle", ...props }) {
 }
 
 useGLTF.preload("/knight.glb");
+useGLTF.preload("/długi_miecz.glb");
+useGLTF.preload("/miecz_dusz.glb");
+useGLTF.preload("/miecz.glb");

@@ -48,7 +48,7 @@ export function Lilia_roz_pos() {
   return (
     <group>
       {pinkFlower.map((obj, index) => (
-        <Lilia_roz key={index} position={obj.posicion} color="##ff1493" rotation={obj.rotation} scale={obj.scale} />
+        <Lilia_roz key={index} position={obj.posicion} color="#ff1493" rotation={obj.rotation} scale={obj.scale} />
       ))}
       {purpleFlower.map((obj, index) => (
         <Lilia_roz key={`p${index}`} position={obj.posicion} color="#c875ff" rotation={obj.rotation} scale={obj.scale} />
