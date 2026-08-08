@@ -10,6 +10,7 @@ import { authRouter } from "./routes/auth";
 import { playerRouter } from "./routes/player";
 import jwt from "jsonwebtoken";
 import { pool } from "./config/db";
+import { IItem } from "../shared/types";
 
 const SECRET_KEY = process.env.SECRET_KEY;
 
@@ -70,10 +71,11 @@ io.on("connection", (socket: CustomSocket) => {
   let goldInput: number = 0; // gold do pomnożenia
   let lastSendMessage = 0;
   let lastAddFriends = 0;
+  let lastHit = 0;
 
-  socket.on("sendMessage", (dane) => {
+  socket.on("sendMessageMove", (dane) => {
     try {
-      io.emit("playerMove", { id: socket.id, x: dane.x, y: dane.y, z: dane.z, action: dane.action, rotation: dane.rotation });
+      io.emit("playerMove", { id: socket.id, x: dane.x, y: dane.y, z: dane.z, action: dane.action, rotation: dane.rotation, weapon: dane.weapon });
     } catch {
       console.log("Błąd socket");
     }
@@ -407,6 +409,120 @@ io.on("connection", (socket: CustomSocket) => {
       await client.query("ROLLBACK");
       console.error("Błąd pobierania danych:", err);
       return socket.emit("addFriendsResult", { success: false, type: "errorChat", message: "Błąd pobierania danych" });
+    } finally {
+      client.release();
+    }
+  });
+
+  socket.on("hitobj", async (dane) => {
+    if (!dane.type) return socket.emit("hitObjResults", { success: false, type: "error", message: "Błąd danych wejściowych" });
+    if (typeof dane.x !== "number" || typeof dane.y !== "number" || typeof dane.z !== "number") return socket.emit("hitObjResults", { success: false, type: "error", message: "Błąd danych wejściowych" });
+
+    // Ochorna przed spam hackiem
+    const now = Date.now();
+    if (now - lastHit < 1000) return socket.emit("hitObjResults", { success: false, type: "errorChat", message: "Spam" });
+    lastHit = now;
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      if (!socket.userId) {
+        await client.query("ROLLBACK");
+        return socket.emit("hitObjResults", { success: false, type: "error", message: "Błąd socketa" });
+      }
+
+      // Wymuszaenie -  wywołanie eventu z daleka
+      const BossPos = { x: 9, y: -1.2, z: 14 };
+      const dx = dane.x - BossPos.x;
+      const dy = dane.y - BossPos.y;
+      const dz = dane.z - BossPos.z;
+      if (Math.sqrt(dx * dx + dy * dy + dz * dz) > 8) {
+        await client.query("ROLLBACK");
+        return socket.emit("hitObjResults", { success: false, type: "error", message: "Za daleko od bossa" });
+      }
+
+      // Pobranie założonej broni
+      const swordResults = await client.query("SELECT inventory FROM player_stats WHERE user_id = $1 FOR UPDATE", [socket.userId]);
+      if (swordResults.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("hitObjResults", { success: false, type: "error", message: "Błąd odczytu danych z bazy" });
+      }
+
+      // Wyciągnięcie broni i obliczenie zadanych obrazen
+      let dmg;
+      const sword: IItem = swordResults.rows[0].inventory.find((item: IItem) => item.czyzalozony === true);
+      if (sword) {
+        if (sword.nazwa === "Długi Miecz") {
+          dmg = sword.obrazenia + (sword.poziom + 1) * 10 * 1;
+        } else if (sword.nazwa === "Miecz Dusz") {
+          dmg = sword.obrazenia + (sword.poziom + 1) * 10 * 2;
+        } else if (sword.nazwa === "Monolit Slayer") {
+          dmg = sword.obrazenia + (sword.poziom + 1) * 10 * 3;
+        } else dmg = 10;
+      } else dmg = 10;
+
+      // Update - obrazen
+      const targetResults = await client.query("SELECT hp, maxhp, rewardgold, hitted FROM boss_stats WHERE name = $1 FOR UPDATE", ["monolit"]);
+      if (targetResults.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("hitObjResults", { success: false, type: "error", message: "Błąd odczytu danych z bazy" });
+      }
+      const currentHp = targetResults.rows[0].hp;
+      const maxHp = targetResults.rows[0].maxhp;
+      const rewardGold = targetResults.rows[0].rewardgold;
+      const hitted: number[] = targetResults.rows[0].hitted ?? [];
+
+      let newHp = currentHp - dmg;
+
+      if (hitted.includes(socket.userId)) {
+        await client.query("UPDATE boss_stats SET hp = $1 WHERE name = $2", [newHp, "monolit"]);
+      } else {
+        await client.query("UPDATE boss_stats SET hp = $1, hitted = array_append(hitted, $2) WHERE name = $3", [newHp, socket.userId, "monolit"]);
+      }
+
+      const finalHitted = hitted.includes(socket.userId) ? hitted : [...hitted, socket.userId];
+
+      // Event - zbity monolit
+      if (newHp <= 0) {
+        console.log("Monolit został zbity");
+        await client.query("UPDATE boss_stats SET hp = $1, hitted = $2 WHERE name = $3", [maxHp, [], "monolit"]);
+        for (const id of finalHitted) {
+          await client.query("UPDATE player_stats SET gold = gold + $1 WHERE user_id = $2", [rewardGold, id]);
+        }
+        await client.query("COMMIT");
+        return io.emit("hitObjResults", { success: true, type: "setGold", message: "Monolit zbity", hp: maxHp });
+      }
+
+      await client.query("COMMIT");
+      return io.emit("hitObjResults", { success: true, type: "hit", message: "Poprawnie uderzono", hp: newHp });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("Błąd pobierania danych:", err);
+      return socket.emit("hitObjResults", { success: false, type: "error", message: "Błąd pobierania danych" });
+    } finally {
+      client.release();
+    }
+  });
+
+  socket.on("setGold", async (dane) => {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const goldResults = await client.query("SELECT gold FROM player_stats WHERE user_id = $1 FOR UPDATE", [socket.userId]);
+      if (goldResults.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return socket.emit("setGoldResults", { success: false, type: "error", message: "Błąd odczytu danych z bazy" });
+      }
+      const currentGold = goldResults.rows[0].gold;
+
+      await client.query("COMMIT");
+      return socket.emit("setGoldResults", { success: true, message: "Poprawnie zaktualizowano stan golda", gold: currentGold });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("Błąd pobierania danych:", err);
+      return socket.emit("hitObjResults", { success: false, type: "error", message: "Błąd pobierania danych" });
     } finally {
       client.release();
     }

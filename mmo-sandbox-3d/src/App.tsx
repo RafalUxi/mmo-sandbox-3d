@@ -48,7 +48,7 @@ import { shopList } from "../../shared/ItemsList";
 
 function App() {
   // ruch - graczy online
-  const otherPlayers = useRef(new Map<string, { x: number; y: number; z: number; action: string; rotation: number }>());
+  const otherPlayers = useRef(new Map<string, { x: number; y: number; z: number; action: string; rotation: number; weapon: string | null }>());
   const [playerIds, setPlayerIds] = useState<string[]>([]);
   const socketRef = useRef<Socket | null>(null);
 
@@ -69,8 +69,6 @@ function App() {
 
   // UI - EQ
   const [isOpenEq, setIsOpenEq] = useState<boolean>(false);
-  const [isContextMenu, setIsContextMenu] = useState<boolean>(false);
-  const [infoSword, setInfoSword] = useState<string>("");
   const [putOnItem, setPutOnItem] = useState<IItem[] | null>(null);
   const [hoveredItem, setHoveredItem] = useState<IItem | null>(null);
   const [isWinUpgrade, setIsWinUpgrade] = useState<string | null>(null);
@@ -107,6 +105,10 @@ function App() {
   const [news, setNews] = useState<string | null>(null);
   const [gold, setGold] = useState<number>(100);
   const [inventory, setInventory] = useState<IItem[]>([]);
+
+  // Boss
+  const [hp, setHp] = useState<number | null>(null);
+  const hpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Ogólne
   const [playerUserName, setPlayerUserName] = useState<string | null>(null);
@@ -158,7 +160,7 @@ function App() {
     socketRef.current.on("playerMove", (dane) => {
       if (dane.id !== socketRef.current?.id) {
         setPlayerIds((prev) => (prev.includes(dane.id) ? prev : [...prev, dane.id]));
-        otherPlayers.current.set(dane.id, { x: dane.x, y: dane.y, z: dane.z, action: dane.action, rotation: dane.rotation });
+        otherPlayers.current.set(dane.id, { x: dane.x, y: dane.y, z: dane.z, action: dane.action, rotation: dane.rotation, weapon: dane.weapon ?? null });
       }
     });
 
@@ -229,6 +231,36 @@ function App() {
         if (prev === null) return [msg];
         return [...prev, msg];
       });
+    });
+
+    socketRef.current.on("hitObjResults", (dane) => {
+      if (dane.success === true && dane.type === "setGold") {
+        socketRef.current?.emit("setGold"); // ustaw złota
+        setHp(dane.hp);
+        setNews(dane.message);
+        setTimeout(() => setNews(null), 1500);
+        if (hpTimerRef.current) clearTimeout(hpTimerRef.current);
+        hpTimerRef.current = setTimeout(() => setHp(null), 10000);
+      }
+      if (dane.success === true && dane.type === "hit") {
+        setHp(dane.hp);
+        if (hpTimerRef.current) clearTimeout(hpTimerRef.current);
+        hpTimerRef.current = setTimeout(() => setHp(null), 10000);
+      }
+      if (dane.success === false) {
+        setNews(dane.message);
+        setTimeout(() => setNews(null), 1500);
+      }
+    });
+
+    socketRef.current.on("setGoldResults", (dane) => {
+      if (dane.success === true) {
+        setGold(dane.gold);
+      }
+      if (dane.success === false) {
+        setNews(dane.message);
+        setTimeout(() => setNews(null), 1500);
+      }
     });
 
     socketRef.current.on("casinoUpdateMultiplier", (dane) => {
@@ -423,6 +455,8 @@ function App() {
   };
 
   const eqWeapon = putOnItem ? putOnItem[0].nazwa : null;
+
+  const dmgOpis = (item: IItem) => {};
 
   if (frontPage) {
     return (
@@ -657,6 +691,24 @@ function App() {
           </div>
         )}
 
+        {hp !== null && (
+          <div className="pointer-events-none absolute top-0 left-1/2 z-50 mt-4 -translate-x-1/2 rounded-xl bg-black/70 px-6 py-3 backdrop-blur-sm" style={{ minWidth: "260px" }}>
+            <p style={{ fontFamily: "'Cinzel', serif" }} className="mb-2 text-center text-sm font-bold tracking-widest text-white">
+              Monolit
+            </p>
+            <div className="h-4 w-full rounded-full bg-gray-700">
+              <div
+                className="h-4 rounded-full transition-all duration-300"
+                style={{
+                  width: `${hp / 10}%`,
+                  backgroundColor: hp > 500 ? "#22c55e" : hp > 200 ? "#eab308" : "#ef4444",
+                }}
+              />
+            </div>
+            <p className="mt-1 text-center text-xs text-gray-300">{hp} / 1000</p>
+          </div>
+        )}
+
         {friendAccept !== null && (
           <div className="pointer-events-auto absolute top-1/3 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center space-y-4 rounded-md bg-black/70 px-6 py-3 whitespace-nowrap">
             <h1 className="pointer-events-none text-3xl font-black tracking-widest text-white">Czy chcesz dodać gracza {friendAccept} do listy znajomych</h1>
@@ -819,8 +871,7 @@ function App() {
                   <h1 className="text-center text-2xl text-yellow-500">{hoveredItem.nazwa}</h1>
                   <span>Ilość: {hoveredItem.ilosc}</span>
                   <span>Poziom: {hoveredItem.poziom}</span>
-                  <span>Obrażenia: </span>
-                  <span>Opis: </span>
+                  <span>Obrażenia: {hoveredItem.obrazenia + (hoveredItem.poziom + 1) * 10 * (hoveredItem.nazwa === "Długi Miecz" ? 1 : hoveredItem.nazwa === "Miecz Dusz" ? 2 : hoveredItem.nazwa === "Monolit Slayer" ? 3 : 0)}</span>
                 </div>
               )}
               <span style={{ fontFamily: "'Cinzel', serif" }} className="pointer-events-none absolute bottom-0 left-0 z-10 mb-149 ml-184 text-2xl/snug text-yellow-500">
@@ -1068,7 +1119,7 @@ function App() {
 
           {/* Modele mapy + kontroler postaci */}
           <Physics timeStep="vary">
-            <PlayerController weapon={eqWeapon} posicionChange={(newPos) => socketRef.current?.emit("sendMessage", { type: "move", ...newPos })} />
+            <PlayerController weapon={eqWeapon} isMonolit={(isHitMonolit) => socketRef.current?.emit("hitobj", { type: "hit", ...isHitMonolit })} posicionChange={(newPos) => socketRef.current?.emit("sendMessageMove", { type: "move", ...newPos, weapon: eqWeapon })} />
             <Stats />
             <MapCollider />
             <GrassPos />

@@ -7,10 +7,11 @@ import { RapierRigidBody, RigidBody, CapsuleCollider, useRapier } from "@react-t
 
 interface ioProps {
   posicionChange: (newPosicion: { x: number; y: number; z: number; action: string; rotation: number }) => void;
+  isMonolit: (isHitMonolit: { x: number; y: number; z: number }) => void;
   weapon: string | null;
 }
 
-export function PlayerController({ posicionChange, weapon }: ioProps) {
+export function PlayerController({ posicionChange, weapon, isMonolit }: ioProps) {
   const playerRef = useRef<THREE.Group>(null);
   const rbRef = useRef<RapierRigidBody>(null);
   const keys = useRef({ w: false, a: false, s: false, d: false, space: false });
@@ -27,12 +28,15 @@ export function PlayerController({ posicionChange, weapon }: ioProps) {
   const hasHit = useRef(false);
   const attackAnimationTime: number = 1.5333333015441895;
   const rotationRef = useRef(0);
+  const posicionChangeRef = useRef(posicionChange);
+
+  useEffect(() => {
+    posicionChangeRef.current = posicionChange;
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (rbRef.current && playerRef.current) {
-        posicionChange({ x: rbRef.current.translation().x, y: rbRef.current.translation().y, z: rbRef.current.translation().z, action: currentActionRef.current, rotation: rotationRef.current });
-      }
+      if (rbRef.current && playerRef.current) posicionChangeRef.current({ x: rbRef.current.translation().x, y: rbRef.current.translation().y, z: rbRef.current.translation().z, action: currentActionRef.current, rotation: rotationRef.current });
     }, 35);
     return () => {
       clearInterval(interval);
@@ -127,6 +131,7 @@ export function PlayerController({ posicionChange, weapon }: ioProps) {
 
         if (data?.type === "Metin") {
           // trafiono Metina
+          isMonolit({ x: rbRef.current.translation().x, y: rbRef.current.translation().y, z: rbRef.current.translation().z });
           console.log("Hit Metin! Distance:", hitObj.time_of_impact);
         }
       }
@@ -144,7 +149,7 @@ export function PlayerController({ posicionChange, weapon }: ioProps) {
     direction.current.y = 0;
     if (direction.current.lengthSq() > 0) direction.current.normalize();
 
-    const speed = 7;
+    const speed = 4;
 
     const currentV = rbRef.current.linvel(); // zmienna przechowuje weketor ruchu w klatce
     const yVel = Math.min(currentV.y, 0);
