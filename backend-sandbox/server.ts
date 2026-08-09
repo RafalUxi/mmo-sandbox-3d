@@ -454,11 +454,11 @@ io.on("connection", (socket: CustomSocket) => {
       const sword: IItem = swordResults.rows[0].inventory.find((item: IItem) => item.czyzalozony === true);
       if (sword) {
         if (sword.nazwa === "Długi Miecz") {
-          dmg = sword.obrazenia + (sword.poziom + 1) * 10 * 1;
+          dmg = (sword.obrazenia ?? 0) + ((sword.poziom ?? 0) + 1) * 10 * 1;
         } else if (sword.nazwa === "Miecz Dusz") {
-          dmg = sword.obrazenia + (sword.poziom + 1) * 10 * 2;
+          dmg = (sword.obrazenia ?? 0) + ((sword.poziom ?? 0) + 1) * 10 * 2;
         } else if (sword.nazwa === "Monolit Slayer") {
-          dmg = sword.obrazenia + (sword.poziom + 1) * 10 * 3;
+          dmg = (sword.obrazenia ?? 0) + ((sword.poziom ?? 0) + 1) * 10 * 3;
         } else dmg = 10;
       } else dmg = 10;
 

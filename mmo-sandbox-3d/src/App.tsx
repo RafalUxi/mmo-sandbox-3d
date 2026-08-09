@@ -18,7 +18,6 @@ import { Orb } from "./map/orb";
 import { Plant } from "./map/Plant";
 import { Lilia_roz_pos } from "./map/map_scripts/lilia_roz_pos";
 import { OtherPlayer } from "../componenets/OtherPlayer";
-import gameplayimg_1 from "./graphics/gameplayimg_1.png";
 import Profil from "./graphics/Profil.jpg";
 import CasinoImg from "./graphics/Casino.png";
 import CasinoExit from "./graphics/CasinoEXT.png";
@@ -37,11 +36,11 @@ import dlugi_miecz_fixed from "./graphics/swords/długi_miecz_fixed.png";
 import miecz_dusz_fixed from "./graphics/swords/miecz_dusz_fixed.png";
 
 import monolit_slayer_fixed from "./graphics/swords/monolit_slayer_fixed.png";
-import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiTailwindcss } from "react-icons/si";
+import { SiGit, SiOpengl, SiThreedotjs, SiJavascript, SiYoutube, SiInstagram, SiBlender, SiReact, SiNodedotjs, SiSocketdotio, SiTypescript, SiSupabase, SiTailwindcss } from "react-icons/si";
 import { TbBox } from "react-icons/tb";
 import { FiGithub, FiLinkedin, FiMail } from "react-icons/fi";
 import { KnightLoggingAnimation } from "./animation/Knight_dance_front";
-import { FiUser, FiLock, FiSend } from "react-icons/fi";
+import { FiUser, FiLock, FiSend, FiLogOut } from "react-icons/fi";
 import { fetchPlayerStats, buyItem, fetchPutOnItem, fetchTakeOffItem, fetchUpgradeItem } from "./fetch/player";
 import { type IItem, type IShop, type IMessage } from "../../shared/types";
 import { shopList } from "../../shared/ItemsList";
@@ -269,6 +268,14 @@ function App() {
       setTimeout(() => setIsWinCasino(null), 1500);
     });
 
+    socketRef.current.on("connect_error", (err) => {
+      if (err.message === "Nieważny token!") {
+        localStorage.removeItem("authToken");
+        setToken(null);
+        setfrontPage(true);
+      }
+    });
+
     socketRef.current.on("disconnectPlayer", (dane) => {
       otherPlayers.current.delete(dane.id);
       setPlayerIds((prev) => prev.filter((id) => id !== dane.id));
@@ -456,7 +463,11 @@ function App() {
 
   const eqWeapon = putOnItem ? putOnItem[0].nazwa : null;
 
-  const dmgOpis = (item: IItem) => {};
+  const LogOut = () => {
+    localStorage.removeItem("authToken");
+    setToken(null);
+    setfrontPage(true);
+  };
 
   if (frontPage) {
     return (
@@ -519,7 +530,7 @@ function App() {
               </div>
             </div>
             <div className="relative z-10 overflow-hidden rounded-xl border border-white/10 shadow-[0_0_80px_-20px_rgba(168,100,255,0.6)]">
-              <img src={gameplayimg_1} alt="Rozgrywka w Monolit" className="w-full transition-transform duration-300 group-hover:-translate-y-1" />
+              <img src="/frontGif.gif" alt="Rozgrywka w Monolit" className="w-full transition-transform duration-300 group-hover:-translate-y-1" />
             </div>
           </div>
         </section>
@@ -579,17 +590,26 @@ function App() {
                   <p>Monolit to dla mnie sprawdzian tej drogi w praktyce: od fizyki i renderowania 3D w przeglądarce, przez logikę rozgrywki, po serwer i bazę danych. Lubię budować rzeczy, które realnie działają i uczyć się, rozumiejąc, jak działają pod spodem.</p>
                 </div>
               </div>
-
-              <div className="mt-6 flex gap-5">
-                <a href="https://github.com/RafalUxi" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
-                  <FiGithub className="h-5 w-5" />
-                </a>
-                <a href="https://linkedin.com/in/Rafał-Trzeciakowski" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
-                  <FiLinkedin className="h-5 w-5" />
-                </a>
-                <a href="mailto:rafal.trzeciakowski9090@o2.pl" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
-                  <FiMail className="h-5 w-5" />
-                </a>
+              <div className="flex-col gap-5 space-y-2">
+                <div className="mt-6 flex gap-5">
+                  <a href="https://github.com/RafalUxi" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
+                    <FiGithub className="h-5 w-5" />
+                  </a>
+                  <a href="linkedin.com/in/rafał-trzeciakowski-201" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
+                    <FiLinkedin className="h-5 w-5" />
+                  </a>
+                  <a href="mailto:rafal.trzeciakowski7@gmail.com" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
+                    <FiMail className="h-5 w-5" />
+                  </a>
+                </div>
+                <div className="ml-5 flex gap-5">
+                  <a href="https://www.youtube.com/@Uxi_dev" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
+                    <SiYoutube className="h-5 w-5" />
+                  </a>
+                  <a href="https://www.instagram.com/uxi_dev/" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
+                    <SiInstagram className="h-5 w-5" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -691,6 +711,9 @@ function App() {
           </div>
         )}
 
+        <div className="pointer-events-auto absolute top-0 right-0 z-20 mt-4 mr-4 cursor-pointer">
+          <FiLogOut onClick={() => LogOut()} className="h-8 w-8 rounded-2xl bg-blue-400" />
+        </div>
         {hp !== null && (
           <div className="pointer-events-none absolute top-0 left-1/2 z-50 mt-4 -translate-x-1/2 rounded-xl bg-black/70 px-6 py-3 backdrop-blur-sm" style={{ minWidth: "260px" }}>
             <p style={{ fontFamily: "'Cinzel', serif" }} className="mb-2 text-center text-sm font-bold tracking-widest text-white">
