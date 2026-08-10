@@ -2,20 +2,27 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool } from "../config/db";
+import { SECRET_KEY } from "../config/jwt";
+import rateLimit from "express-rate-limit";
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "Za dużo prób. Spróbuj za 15 minut." },
+});
 
 export const authRouter = Router();
 
-const SECRET_KEY = process.env.SECRET_KEY;
+authRouter.post("/login", authLimiter, async (req, res) => {
+  const { login, password } = req.body;
 
-if (!SECRET_KEY) {
-  throw new Error("BRAK KLUCZA SECRET_KEY W PLIKU .env");
-}
+  if (!login || !password) return res.status(401).json({ message: "Błąd danych wejściowych" });
+  if (typeof login !== "string" || typeof password !== "string") return res.status(401).json({ message: "Błąd danych wejściowych" });
 
-authRouter.post("/login", async (req, res) => {
-  const { chatInput_login_login, chatInput_login_password } = req.body;
+  if (login.length > 300 || password.length > 300) return res.status(401).json({ message: "Zbyt długi login lub hasło" });
 
   try {
-    const userResult = await pool.query("SELECT id, password_hash FROM users WHERE username = $1 ", [chatInput_login_login]);
+    const userResult = await pool.query("SELECT id, password_hash FROM users WHERE username = $1 ", [login]);
 
     if (userResult.rows.length === 0) {
       return res.status(401).json({ message: "Nieprawidłowy login lub hasło." });
@@ -23,7 +30,7 @@ authRouter.post("/login", async (req, res) => {
 
     const userData = userResult.rows[0];
 
-    const isPassword = await bcrypt.compare(chatInput_login_password, userData.password_hash);
+    const isPassword = await bcrypt.compare(password, userData.password_hash);
 
     if (!isPassword) {
       return res.status(401).json({ message: "Nieprawidłowe hasło." });
@@ -42,17 +49,23 @@ authRouter.post("/login", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ message: "Błąd serwera" });
   }
 });
 
-authRouter.post("/register", async (req, res) => {
-  const { chatInput_register_login, chatInput_register_password } = req.body;
-  console.log(chatInput_register_login);
+authRouter.post("/register", authLimiter, async (req, res) => {
+  const { login, password } = req.body;
+
+  if (!login || !password) return res.status(401).json({ message: "Błąd danych wejściowych" });
+  if (typeof login !== "string" || typeof password !== "string") return res.status(401).json({ message: "Błąd danych wejściowych" });
+
+  if (login.length > 300 || password.length > 300) return res.status(401).json({ message: "Zbyt długi login lub hasło" });
+
   const saltRounds = 10;
   try {
-    const hashedPassword = await bcrypt.hash(chatInput_register_password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    const userResult = await pool.query("INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id ", [chatInput_register_login, hashedPassword]);
+    const userResult = await pool.query("INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id ", [login, hashedPassword]);
 
     const newUserId = userResult.rows[0].id;
 

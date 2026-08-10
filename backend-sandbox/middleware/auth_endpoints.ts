@@ -1,14 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-
-const SECRET_KEY = process.env.SECRET_KEY;
-
-if (!SECRET_KEY) {
-  throw new Error("BRAK KLUCZA SECRET_KEY W PLIKU .env! Serwer zatrzymany.");
-}
+import { SECRET_KEY } from "../config/jwt";
 
 export interface AuthRequest extends Request {
-  user?: any;
+  user?: { userId: number };
 }
 
 export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -26,7 +21,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
       return;
     }
 
-    req.user = decodedUser;
+    req.user = decodedUser as { userId: number };
     next();
   });
 };

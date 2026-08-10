@@ -7,9 +7,9 @@ import crypto from "node:crypto";
 
 export const playerRouter = Router();
 
-playerRouter.post("/stats", authenticateToken, async (req: AuthRequest, res) => {
+playerRouter.get("/stats", authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const playerId = req.user.userId;
+    const playerId = req.user!.userId;
 
     const result = await pool.query("SELECT * FROM player_stats WHERE user_id = $1", [playerId]);
 
@@ -36,8 +36,8 @@ playerRouter.post("/stats", authenticateToken, async (req: AuthRequest, res) => 
   }
 });
 
-playerRouter.post("/buy-item", authenticateToken, async (req: AuthRequest, res) => {
-  const playerId = req.user.userId;
+playerRouter.post("/inventory/buy", authenticateToken, async (req: AuthRequest, res) => {
+  const playerId = req.user!.userId;
   const { item } = req.body;
 
   if (!item || !item.id) return res.status(400).json({ message: "Brak danych" });
@@ -100,8 +100,8 @@ playerRouter.post("/buy-item", authenticateToken, async (req: AuthRequest, res) 
   }
 });
 
-playerRouter.post("/put-on-item", authenticateToken, async (req: AuthRequest, res) => {
-  const playerId = req.user.userId;
+playerRouter.patch("/inventory/equip", authenticateToken, async (req: AuthRequest, res) => {
+  const playerId = req.user!.userId;
   const { item } = req.body;
   if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
 
@@ -151,8 +151,8 @@ playerRouter.post("/put-on-item", authenticateToken, async (req: AuthRequest, re
   }
 });
 
-playerRouter.post("/take-off-item", authenticateToken, async (req: AuthRequest, res) => {
-  const playerId = req.user.userId;
+playerRouter.patch("/inventory/unequip", authenticateToken, async (req: AuthRequest, res) => {
+  const playerId = req.user!.userId;
   const { item } = req.body;
 
   if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });
@@ -215,8 +215,8 @@ const mergeInventory = (inventory: IItem[]): IItem[] => {
   return [...map.values()].filter((i) => i.ilosc > 0);
 };
 
-playerRouter.post("/upgrade-item", authenticateToken, async (req: AuthRequest, res) => {
-  const playerId: number = req.user.userId;
+playerRouter.post("/inventory/upgrade", authenticateToken, async (req: AuthRequest, res) => {
+  const playerId: number = req.user!.userId;
   const { item } = req.body;
 
   if (!playerId || !item) return res.status(500).json({ message: "Błąd - danych wejściowych" });

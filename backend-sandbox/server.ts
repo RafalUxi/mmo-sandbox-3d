@@ -11,12 +11,7 @@ import { playerRouter } from "./routes/player";
 import jwt from "jsonwebtoken";
 import { pool } from "./config/db";
 import { IItem } from "../shared/types";
-
-const SECRET_KEY = process.env.SECRET_KEY;
-
-if (!SECRET_KEY) {
-  throw new Error("BRAK KLUCZA SECRET_KEY W PLIKU .env");
-}
+import { SECRET_KEY } from "./config/jwt";
 
 const app = express();
 app.use(cors());

@@ -1,10 +1,8 @@
 # Zależności
 node_modules/
 
-# Hasła i klucze (KRYTYCZNE)
-.env
+# Hasła i klucze
 .env.local
 
-# Zbudowane pliki TypeScript (jeśli w przyszłości będziesz kompilować)
 dist/
 build/
