@@ -154,7 +154,7 @@ function App() {
   useEffect(() => {
     if (!token) return;
 
-    socketRef.current = io("http://localhost:5000", { auth: { token: token } });
+    socketRef.current = io(import.meta.env.VITE_API_URL, { auth: { token: token } });
 
     socketRef.current.on("playerMove", (dane) => {
       if (dane.id !== socketRef.current?.id) {
@@ -288,10 +288,10 @@ function App() {
 
   const loginOutput = async () => {
     try {
-      const response = await fetch("http://localhost:5000/auth/login", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatInput_login_login, chatInput_login_password }),
+        body: JSON.stringify({ login: chatInput_login_login, password: chatInput_login_password }),
       });
 
       const data = await response.json();
@@ -311,10 +311,10 @@ function App() {
 
   const registerOutput = async () => {
     try {
-      const response = await fetch("http://localhost:5000/auth/register", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatInput_register_login, chatInput_register_password }),
+        body: JSON.stringify({ login: chatInput_register_login, password: chatInput_register_password }),
       });
       const data = await response.json();
       if (response.ok) {

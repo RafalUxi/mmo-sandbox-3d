@@ -1,8 +1,8 @@
 import { type IItem, type IShop } from "../../../shared/types";
 
 export const fetchPlayerStats = async (token: string) => {
-  const res = await fetch("http://localhost:5000/player/stats", {
-    method: "POST",
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/player/stats`, {
+    method: "GET",
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error("Błąd pobierania danych");
@@ -10,7 +10,7 @@ export const fetchPlayerStats = async (token: string) => {
 };
 
 export const buyItem = async (item: IShop, token: string) => {
-  const res = await fetch("http://localhost:5000/player/buy-item", {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/player/inventory/buy`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ item }),
@@ -20,8 +20,8 @@ export const buyItem = async (item: IShop, token: string) => {
 };
 
 export const fetchPutOnItem = async (item: IItem, token: string) => {
-  const res = await fetch("http://localhost:5000/player/put-on-item", {
-    method: "POST",
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/player/inventory/equip`, {
+    method: "PATCH",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ item }),
   });
@@ -30,8 +30,8 @@ export const fetchPutOnItem = async (item: IItem, token: string) => {
 };
 
 export const fetchTakeOffItem = async (item: IItem, token: string) => {
-  const res = await fetch("http://localhost:5000/player/take-off-item", {
-    method: "POST",
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/player/inventory/unequip`, {
+    method: "PATCH",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ item }),
   });
@@ -40,7 +40,7 @@ export const fetchTakeOffItem = async (item: IItem, token: string) => {
 };
 
 export const fetchUpgradeItem = async (item: IItem, token: string) => {
-  const res = await fetch("http://localhost:5000/player/upgrade-item", {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/player/inventory/upgrade`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ item }),

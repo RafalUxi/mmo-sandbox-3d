@@ -3,6 +3,7 @@ node_modules/
 
 # Hasła i klucze
 .env.local
+.env
 
 dist/
 build/

@@ -27,8 +27,8 @@ const httpServer = createServer(app);
 // włączenie serwera (centrali)- argument cors przepuszcza tylko zapytania z frontendu (react)
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"],
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    methods: ["GET", "POST", "PATCH"],
   },
 });
 
