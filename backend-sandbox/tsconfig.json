@@ -8,6 +8,7 @@
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
     "module": "commonjs",
+    "esModuleInterop": true,
     "target": "es2020",
     "types": ["node"],
     // For nodejs:
