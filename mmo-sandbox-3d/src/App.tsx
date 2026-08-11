@@ -19,7 +19,7 @@ import { Plant } from "./map/Plant";
 import { Lilia_roz_pos } from "./map/map_scripts/lilia_roz_pos";
 import { OtherPlayer } from "../componenets/OtherPlayer";
 import Profil from "./graphics/Profil.jpg";
-import CasinoImg from "./graphics/Casino.png";
+import CasinoImg from "./graphics/casino.png";
 import CasinoExit from "./graphics/CasinoEXT.png";
 import GoldUI from "./graphics/UI/ikonaGold.png";
 import CasinoUI from "./graphics/UI/ikonaCas.png";
