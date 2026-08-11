@@ -163,26 +163,6 @@ function App() {
       }
     });
 
-    socketRef.current.on("casinoResult", (dane) => {
-      if (dane.success === true) {
-        setCasinoErr(false);
-        setGold(dane.gold);
-        if (dane.message === "Crash") {
-          setIsWinCasino(`Przegrałeś zakład`);
-          setTimeout(() => setIsWinCasino(null), 1500);
-          setIsLosuj(true);
-        }
-        if (dane.message === "Win") {
-          setIsWinCasino(`Wygrałeś ${dane.winGold} golda!`);
-          setTimeout(() => setIsWinCasino(null), 1500);
-        }
-      } else if (dane.success === false) {
-        setCasinoErr(true);
-        setIsLosuj(true);
-        console.log(dane.message);
-      }
-    });
-
     socketRef.current.on("addFriendsResult", (dane) => {
       if (dane.type === "error") {
         console.log(dane.message);
@@ -262,10 +242,27 @@ function App() {
       }
     });
 
+    socketRef.current.on("casinoResult", (dane) => {
+      if (dane.success === true) {
+        setCasinoErr(false);
+        setGold(dane.gold);
+        if (dane.message === "Crash") {
+          setIsWinCasino(`Przegrałeś zakład`);
+          setTimeout(() => setIsWinCasino(null), 1500);
+          setIsLosuj(true);
+        }
+        if (dane.message === "Win") {
+          setIsWinCasino(`Wygrałeś ${dane.winGold} golda!`);
+          setTimeout(() => setIsWinCasino(null), 1500);
+        }
+      } else if (dane.success === false) {
+        setCasinoErr(true);
+        setIsLosuj(true);
+      }
+    });
+
     socketRef.current.on("casinoUpdateMultiplier", (dane) => {
       setMultiplier(dane.currentMultiplier);
-      setIsWinCasino(dane.message);
-      setTimeout(() => setIsWinCasino(null), 1500);
     });
 
     socketRef.current.on("connect_error", (err) => {
