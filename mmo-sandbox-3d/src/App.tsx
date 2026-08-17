@@ -155,6 +155,7 @@ function App() {
     if (!token) return;
 
     socketRef.current = io(import.meta.env.VITE_API_URL, { auth: { token: token } });
+    (window as any).s = socketRef.current;
 
     socketRef.current.on("playerMove", (dane) => {
       if (dane.id !== socketRef.current?.id) {

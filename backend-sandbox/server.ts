@@ -68,12 +68,17 @@ io.on("connection", (socket: CustomSocket) => {
   let lastAddFriends = 0;
   let lastHit = 0;
 
-  socket.on("sendMessageMove", (dane) => {
-    try {
-      io.emit("playerMove", { id: socket.id, x: dane.x, y: dane.y, z: dane.z, action: dane.action, rotation: dane.rotation, weapon: dane.weapon });
-    } catch {
-      console.log("Błąd socket");
+  const lastPos = new Map<string, { x: number; z: number; t: number }>();
+  const speed = 6;
+  socket.on("sendMessageMove", (d) => {
+    const now = Date.now();
+    const prev = lastPos.get(socket.id);
+    if (prev) {
+      const dt = (now - prev.t) / 1000;
+      if (dt > 0 && Math.hypot(d.x - prev.x, d.z - prev.z) / dt > speed) return;
     }
+    lastPos.set(socket.id, { x: d.x, z: d.z, t: now });
+    io.emit("playerMove", { id: socket.id, ...d });
   });
 
   socket.on("AddFriends", async (dane) => {
