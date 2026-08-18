@@ -71,11 +71,14 @@ io.on("connection", (socket: CustomSocket) => {
   const lastPos = new Map<string, { x: number; z: number; t: number }>();
   const speed = 6;
   socket.on("sendMessageMove", (d) => {
+    if (typeof d.x !== "number" || typeof d.y !== "number" || typeof d.z !== "number" || !Number.isFinite(d.x) || !Number.isFinite(d.y) || !Number.isFinite(d.z)) return;
+    if (d.y < 0 || d.y > 3) return;
+
     const now = Date.now();
     const prev = lastPos.get(socket.id);
     if (prev) {
-      const dt = (now - prev.t) / 1000;
-      if (dt > 0 && Math.hypot(d.x - prev.x, d.z - prev.z) / dt > speed) return;
+      const dt = Math.max(now - prev.t, 1) / 1000;
+      if (Math.hypot(d.x - prev.x, d.z - prev.z) / dt > speed) return;
     }
     lastPos.set(socket.id, { x: d.x, z: d.z, t: now });
     io.emit("playerMove", { id: socket.id, ...d });
@@ -434,13 +437,8 @@ io.on("connection", (socket: CustomSocket) => {
 
       // Wymuszaenie -  wywołanie eventu z daleka
       const BossPos = { x: 9, y: -1.2, z: 14 };
-      const dx = dane.x - BossPos.x;
-      const dy = dane.y - BossPos.y;
-      const dz = dane.z - BossPos.z;
-      if (Math.sqrt(dx * dx + dy * dy + dz * dz) > 8) {
-        await client.query("ROLLBACK");
-        return socket.emit("hitObjResults", { success: false, type: "error", message: "Za daleko od bossa" });
-      }
+      const p = lastPos.get(socket.id);
+      if (!p || Math.hypot(p.x - BossPos.x, p.z - BossPos.z) > 8) return socket.emit("hitObjResults", { success: false, type: "error", message: "Za daleko od bossa" });
 
       // Pobranie założonej broni
       const swordResults = await client.query("SELECT inventory FROM player_stats WHERE user_id = $1 FOR UPDATE", [socket.userId]);
