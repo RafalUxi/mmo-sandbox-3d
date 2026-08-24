@@ -593,7 +593,7 @@ function App() {
                   <a href="https://github.com/RafalUxi" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
                     <FiGithub className="h-5 w-5" />
                   </a>
-                  <a href="linkedin.com/in/rafał-trzeciakowski-201" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
+                  <a href="https://www.linkedin.com/in/rafa%C5%82-trzeciakowski-2015b4419/" target="_blank" rel="noopener noreferrer" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
                     <FiLinkedin className="h-5 w-5" />
                   </a>
                   <a href="mailto:rafal.trzeciakowski7@gmail.com" className="text-white/40 transition-colors duration-200 hover:text-purple-300">
