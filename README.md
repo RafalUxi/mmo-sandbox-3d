@@ -1,30 +1,30 @@
-# Monolit — Browser-Based 3D MMO
+# Monolit: browser-based 3D MMO
 
-A real-time multiplayer 3D MMO that runs entirely in the browser. Explore a bioluminescent world, fight, trade, upgrade gear, and gamble your gold with no download required.
+A multiplayer 3D MMO that runs in the browser. You explore a bioluminescent world, fight, trade, upgrade gear, and bet your gold in the casino. There is nothing to download.
 
-🎮 Live demo: https://mmo-sandbox-3d.vercel.app/
+Live demo: https://mmo-sandbox-3d.vercel.app/
 
-⚠️ The backend runs on a free tier that sleeps after inactivity, so the first load may take up to ~50 seconds to wake the server.
+> The backend runs on a free tier that sleeps after inactivity, so the first load can take up to about 50 seconds while the server wakes up.   
 > The game UI is in Polish.
 
 https://github.com/user-attachments/assets/393e85eb-4d70-4b93-803d-3075d36258e7
 
 ## About
 
-Monolit is a solo-built portfolio project. It is a full-stack, real-time multiplayer game built from the ground up: 3D rendering and physics in the browser, an authoritative game server, persistent player data, and a full economy loop. The goal was to build something that genuinely works end to end, not just locally, and to solve the hard problems that come with real-time multiplayer and a server-authoritative economy.
+Monolit is a portfolio project I built alone. It is a full-stack multiplayer game with 3D rendering and physics in the browser, an authoritative game server, persistent player data, and a working economy. I wanted it to run in production and not just on my machine, which is where the interesting problems showed up: keeping state in sync in real time, and building an economy the client cannot cheat.
 
 ## Features
 
-- **Real-time multiplayer.** See other players move and interact live over WebSockets.
-- **3D world in the browser.** Rendered with React Three Fiber, with real physics via Rapier.
-- **Combat.** Hit detection against destructible targets.
-- **Inventory and gear.** Collect, equip, and upgrade items.
-- **Item upgrading.** Server-side RNG with success and fail mechanics.
-- **Casino.** A gold-sink crash-style betting game with a built-in house edge.
-- **Private chat.** Real-time messaging between players.
-- **Authentication.** Secure registration and login using JWT and bcrypt.
+- Real-time multiplayer over WebSockets. You see other players move and act live.
+- A 3D world rendered with React Three Fiber, with physics from Rapier.
+- Combat with hit detection against destructible targets.
+- An inventory where you collect, equip and upgrade items.
+- Item upgrading with server-side RNG, including failed attempts.
+- A crash-style betting game with a house edge, which works as a gold sink.
+- Private real-time chat between players.
+- Registration and login with JWT and bcrypt.
 
-## Tech Stack
+## Tech stack
 
 **Frontend**
 - React and TypeScript
@@ -40,13 +40,13 @@ Monolit is a solo-built portfolio project. It is a full-stack, real-time multipl
 - JWT and bcrypt for authentication
 
 **Infrastructure**
-- Frontend deployed on Vercel
-- Backend deployed on Render
-- Database hosted on Supabase
+- Frontend on Vercel
+- Backend on Render
+- Database on Supabase
 
 ## Architecture
 
-The project is split into three independently deployed parts. The browser renders the game and captures input. The Node server is authoritative and owns all game logic, randomness, and economy operations, so the client can never be trusted with outcomes. Real-time state such as movement, chat, and casino rounds flows over a persistent WebSocket connection, while regular data such as login, inventory, and shop actions uses a REST API. PostgreSQL stores players, stats, and inventory.
+The project is split into three parts that deploy independently. The browser renders the game and captures input. The Node server is authoritative and owns all game logic, randomness and economy operations, so the client can never be trusted with outcomes. Real-time state such as movement, chat and casino rounds flows over a persistent WebSocket connection, while regular data such as login, inventory and shop actions goes through the REST API. PostgreSQL stores players, stats and inventory.
 
 ```mermaid
 flowchart LR
@@ -59,17 +59,25 @@ flowchart LR
     B -->|"SQL queries + transactions"| C
 ```
 
-## Key Technical Decisions
+## Key technical decisions
 
-**Server-authoritative economy.** All gold and item operations run on the server. The client only sends intent such as "place bet" or "buy item". The server validates it, generates any randomness with Node's `crypto` module, and writes the result. This prevents players from tampering with outcomes through the browser.
+### Server-authoritative economy
 
-**Concurrency-safe transactions.** Operations on player gold and inventory use PostgreSQL transactions with row-level locking (`SELECT ... FOR UPDATE`). This prevents race conditions. For example, double-clicking "buy" or firing two requests at once cannot duplicate gold or items. Each mutation is atomic, so it either fully succeeds or rolls back.
+All gold and item operations run on the server. The client only sends intent, such as "place bet" or "buy item". The server validates it, generates any randomness with Node's `crypto` module, and writes the result. Players cannot tamper with outcomes through the browser.
 
-**Casino house edge.** The crash game's outcome is drawn from a probability distribution tuned so the expected payout is below the stake. This makes the casino a controlled gold-sink for the economy rather than a way to print currency.
+### Concurrency-safe transactions
 
-**JSON inventory as a conscious trade-off.** Inventory is stored as a JSON column rather than a normalized table. This kept iteration fast for a solo project, at the cost of not being able to query across items at the database level. It is a trade-off I would revisit for a larger-scale system.
+Operations on player gold and inventory use PostgreSQL transactions with row-level locking (`SELECT ... FOR UPDATE`), which prevents race conditions. Double-clicking "buy" or firing two requests at once cannot duplicate gold or items. Each mutation is atomic, so it either fully succeeds or rolls back.
 
-## Running Locally
+### Casino house edge
+
+The crash game draws its outcome from a probability distribution tuned so the expected payout stays below the stake. That makes the casino a controlled gold sink for the economy instead of a way to print currency.
+
+### JSON inventory as a conscious trade-off
+
+Inventory is stored as a JSON column rather than a normalized table. This kept iteration fast for a solo project, at the cost of not being able to query across items at the database level. For a larger system I would do it differently.
+
+## Running locally
 
 **Prerequisites:** Node.js 20 or newer, and a PostgreSQL database
 
@@ -83,7 +91,7 @@ cd mmo-sandbox-3d
 ```bash
 cd backend-sandbox
 npm install
-# create a .env file (see "Environment Variables" below)
+# create a .env file (see "Environment variables" below)
 npm run dev
 ```
 The server runs on `http://localhost:5000`.
@@ -92,28 +100,22 @@ The server runs on `http://localhost:5000`.
 ```bash
 cd mmo-sandbox-3d
 npm install
-# create a .env file (see "Environment Variables" below)
+# create a .env file (see "Environment variables" below)
 npm run dev
 ```
-The app runs on `http://localhost:5173` (Vite's default).
+The app runs on `http://localhost:5173`, which is Vite's default.
 
 **4. Open the game** at `http://localhost:5173` in your browser.
 
-## Environment Variables
+## Environment variables
 
 Each part needs its own `.env` file. The values below are examples.
-
-## Environment Variables
 
 **Backend** (`backend-sandbox/.env`)
 ```bash
 DATABASE_URL=postgresql://user:password@host:5432/database
 SECRET_KEY=your_jwt_secret
-COR
-
-https://github.com/user-attachments/assets/b514b1f5-38a6-4943-acf1-efb3030a8f4c
-
-S_ORIGIN=http://localhost:5173
+CORS_ORIGIN=http://localhost:5173
 ```
 
 **Frontend** (`mmo-sandbox-3d/.env`)
@@ -121,24 +123,24 @@ S_ORIGIN=http://localhost:5173
 VITE_API_URL=http://localhost:5000
 ```
 
-## Project Structure
+## Project structure
 ```bash
 mmo-sandbox-3d/
-  backend-sandbox/      serwer Node + Express + Socket.IO
-    config/             konfiguracja bazy i JWT
-    middleware/         autoryzacja
-    routes/             endpointy REST
-  mmo-sandbox-3d/       frontend React + R3F
-    models/             modele, animacje
-    public/             assety
-    componenets/        komponenty
-    src/                komponenty, logika gry, assety
-  shared/               wspólne typy TypeScript
+  backend-sandbox/      Node + Express + Socket.IO server
+    config/             database and JWT config
+    middleware/         authorization
+    routes/             REST endpoints
+  mmo-sandbox-3d/       React + R3F frontend
+    models/             models and animations
+    public/             assets
+    componenets/        components
+    src/                components, game logic, assets
+  shared/               shared TypeScript types
 ```
- 
-## 📹 Dev-log — "Full Stack Logs"
 
-I'm documenting the development of Monolit on YouTube.
+## Dev-log: "Full Stack Logs"
+
+I document the development of Monolit on YouTube.
 
 | Security exploits | Inventory & upgrading | The casino |
 |:---:|:---:|:---:|
