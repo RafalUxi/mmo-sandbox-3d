@@ -20,6 +20,9 @@ app.use(express.json());
 // Router - endpoints
 app.use("/auth", authRouter);
 app.use("/player", playerRouter);
+app.get("/health", (_req, res) => {
+  res.send("ok");
+}); // ping z cron-job.org, żeby Render nie usypiał serwera
 
 // do tego websocekt może się podpiąć
 const httpServer = createServer(app);
