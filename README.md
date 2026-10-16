@@ -4,7 +4,6 @@ A multiplayer 3D MMO that runs in the browser. You explore a bioluminescent worl
 
 Live demo: https://mmo-sandbox-3d.vercel.app/
 
-> The backend runs on a free tier that sleeps after inactivity, so the first load can take up to about 50 seconds while the server wakes up.   
 > The game UI is in Polish.
 
 https://github.com/user-attachments/assets/393e85eb-4d70-4b93-803d-3075d36258e7
